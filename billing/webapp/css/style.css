@@ -1,1 +1,6 @@
 /* Enter your custom styles here */
+.myCreateBtn .sapMBtnInner{
+  background: var(--sapAccentColor7);
+  color: var(--sapButton_TextColor);
+  font-family: var(--sapFontFamily);
+}

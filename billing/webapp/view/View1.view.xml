@@ -2,5 +2,100 @@
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m">
     <Page id="page" title="{i18n>title}">
+
+  <customHeader>
+  <OverflowToolbar id="otbHeader">
+    <Title id="hdrTitle" text="Billing"/>
+
+    <Button id="btnCreate" text="Create" type="Emphasized"
+            class="myCreateBtn" press=".onCreate"/>
+    <Button id="btnDelete" icon="sap-icon://delete" press=".onDelete"
+            tooltip="Delete selected"/>
+
+    <!-- Icons links von der Suche -->
+    <Button id="btnFilter" icon="sap-icon://filter" press=".onFilter"/>
+    <Button id="btnSettings" icon="sap-icon://action-settings" press=".onSettings"/>
+
+    <ToolbarSpacer id="hdrSpacer"/>
+
+    <SearchField id="sfSearch" width="18rem" placeholder="Search"
+                 liveChange=".onSearchLive"/>
+  </OverflowToolbar>
+</customHeader>
+
+<Table
+  id="tblBilling"
+  inset="false"
+  alternateRowColors="true"
+  sticky="ColumnHeaders"
+  mode="MultiSelect">
+  <columns>
+    <Column width="4rem">
+      <Text text="Status"/>
+    </Column>
+    <Column>
+      <Text text="Recipient Name"/>
+    </Column>
+    <Column>
+      <Text text="Recipient Email"/>
+    </Column>
+    <Column>
+      <Text text="Invoice No."/>
+    </Column>
+    <Column hAlign="End">
+      <Text text="Netto Value"/>
+    </Column>
+    <Column hAlign="End">
+      <Text text="Brutto Value"/>
+    </Column>
+    <Column width="4rem">
+      <Text text="CCY"/>
+    </Column>
+    <Column>
+      <Text text="Salesorg"/>
+    </Column>
+    <Column>
+      <Text text="Reference"/>
+    </Column>
+    <Column>
+      <Text text="Creation Date"/>
+    </Column>
+    <Column>
+      <Text text="Dispatch Date"/>
+    </Column>
+    <Column>
+      <Text text="Transfer Fromat"/>
+    </Column>
+    <Column>
+      <Text text="Delivery Method"/>
+    </Column>
+    <Column>
+      <Text text="PDF"/>
+    </Column>
+  </columns>
+
+  <!-- Zeilen kommen in Schritt 3 -->
+  <items>
+    <ColumnListItem>
+      <cells>
+        <Text text="⟳"/>
+        <Text text="Company GmbH &amp; Co. KG"/>
+        <Text text="example@email.com"/>
+        <Text text="00900035598"/>
+        <Text text="19 503.26 EUR"/>
+        <Text text="19 503.26 EUR"/>
+        <Text text="EUR"/>
+        <Text text="1000"/>
+        <Text text="1000"/>
+        <Text text="Oct 27, 2025"/>
+        <Text text="Oct 27, 2025"/>
+        <Text text="1000"/>
+        <Text text="1000"/>
+        <Text text="1000"/>
+      </cells>
+    </ColumnListItem>
+  </items>
+</Table>
+
     </Page>
 </mvc:View>
