@@ -9,6 +9,7 @@ sap.ui.define([
         onCreate() {},          // folgt später
         onSearchLive() {},      // folgt später
         onFilter() {},          // folgt später
-        onSettings() {}         // folgt später (Icon lässt sich dann durch Custom-Icon ersetzen)
+        onSettings() {},         // folgt später (Icon lässt sich dann durch Custom-Icon ersetzen)
+        onReload() {}
     });
 });

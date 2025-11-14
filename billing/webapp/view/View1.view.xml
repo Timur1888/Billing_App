@@ -11,13 +11,14 @@
             class="myCreateBtn" press=".onCreate"/>
     <Button id="btnDelete" icon="sap-icon://delete" press=".onDelete"
             tooltip="Delete selected"/>
+    <Button icon="sap-icon://refresh" press="onReload" type="Transparent"/>
 
-    <!-- Icons links von der Suche -->
-    <Button id="btnFilter" icon="sap-icon://filter" press=".onFilter"/>
-    <Button id="btnSettings" icon="sap-icon://action-settings" press=".onSettings"/>
+
 
     <ToolbarSpacer id="hdrSpacer"/>
-
+      <!-- Icons links von der Suche -->
+    <Button id="btnSettings" icon="sap-icon://action-settings" press=".onSettings"/>
+    <Button id="btnFilter" icon="sap-icon://filter" press=".onFilter"/>
     <SearchField id="sfSearch" width="18rem" placeholder="Search"
                  liveChange=".onSearchLive"/>
   </OverflowToolbar>
