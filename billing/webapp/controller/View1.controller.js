@@ -10,9 +10,7 @@ sap.ui.define([
         var oModel = new JSONModel();
         this.getView().setModel(oModel, "billings");
         },
-<<<<<<< HEAD
 
-=======
         onCreate() {},          
         onSearchLive() {},      
         onFilter() {},          
@@ -34,6 +32,5 @@ sap.ui.define([
                 invoiceId: sInvoiceId
       });
     }         
->>>>>>> createPannel
     });
 });
