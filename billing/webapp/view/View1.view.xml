@@ -1,6 +1,7 @@
 <mvc:View controllerName="billing.controller.View1"
     xmlns:mvc="sap.ui.core.mvc"
-    xmlns="sap.m">
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core">
     <Page id="page" title="{i18n>title}">
 
   <customHeader>
@@ -22,80 +23,87 @@
                  liveChange=".onSearchLive"/>
   </OverflowToolbar>
 </customHeader>
+ <content>
+    <Table
+      id="tblBilling"
+      inset="false"
+      alternateRowColors="true"
+      sticky="ColumnHeaders"
+      mode="SingleSelectMaster"
+      items="{/Invoices}"
+      itemPress=".onInvoicePress">
+            <columns>
+                <Column><Text text="Status"/></Column>
+                <Column><Text text="Recipient Name"/></Column>
+                <Column><Text text="Recipient Email"/></Column>
+                <Column hAlign="Center"><Text text="Invoice Type"/></Column>
+                <Column><Text text="Invoice No."/></Column>
+                <Column hAlign="End"><Text text="Netto Value"/></Column>
+                <Column hAlign="End"><Text text="Brutto Value"/></Column>
+                <Column><Text text="CCY"/></Column>
+                <Column><Text text="Sales Org"/></Column>
+                <Column><Text text="Reference"/></Column>
+                <Column><Text text="Creation Date"/></Column>
+                <Column><Text text="Dispatch Date"/></Column>
+                <Column><Text text="Transfer Format"/></Column>
+                <Column><Text text="Delivery Method"/></Column>
+                <Column><Text text="Delivery ID"/></Column>
+                <Column><Text text="PDF"/></Column>
+            </columns>
 
-<Table
-  id="tblBilling"
-  inset="false"
-  alternateRowColors="true"
-  sticky="ColumnHeaders"
-  mode="MultiSelect">
-  <columns>
-    <Column width="4rem">
-      <Text text="Status"/>
-    </Column>
-    <Column>
-      <Text text="Recipient Name"/>
-    </Column>
-    <Column>
-      <Text text="Recipient Email"/>
-    </Column>
-    <Column>
-      <Text text="Invoice No."/>
-    </Column>
-    <Column hAlign="End">
-      <Text text="Netto Value"/>
-    </Column>
-    <Column hAlign="End">
-      <Text text="Brutto Value"/>
-    </Column>
-    <Column width="4rem">
-      <Text text="CCY"/>
-    </Column>
-    <Column>
-      <Text text="Salesorg"/>
-    </Column>
-    <Column>
-      <Text text="Reference"/>
-    </Column>
-    <Column>
-      <Text text="Creation Date"/>
-    </Column>
-    <Column>
-      <Text text="Dispatch Date"/>
-    </Column>
-    <Column>
-      <Text text="Transfer Fromat"/>
-    </Column>
-    <Column>
-      <Text text="Delivery Method"/>
-    </Column>
-    <Column>
-      <Text text="PDF"/>
-    </Column>
-  </columns>
+            <!-- Zellen / Items (an Mockdaten gebunden) -->
+            <items>
+                <ColumnListItem type="Active">
+                    <cells>
+                        <!-- Status -->
+                        <ObjectStatus
+                            icon="{StatusIcon}"
+                            state="{StatusState}"/>
+                            
+                        <!-- Recipient Name -->
+                        <Text text="{RecipientName}"/>
 
-  <!-- Zeilen kommen in Schritt 3 -->
-  <items>
-    <ColumnListItem>
-      <cells>
-        <Text text="⟳"/>
-        <Text text="Company GmbH &amp; Co. KG"/>
-        <Text text="example@email.com"/>
-        <Text text="00900035598"/>
-        <Text text="19 503.26 EUR"/>
-        <Text text="19 503.26 EUR"/>
-        <Text text="EUR"/>
-        <Text text="1000"/>
-        <Text text="1000"/>
-        <Text text="Oct 27, 2025"/>
-        <Text text="Oct 27, 2025"/>
-        <Text text="1000"/>
-        <Text text="1000"/>
-        <Text text="1000"/>
-      </cells>
-    </ColumnListItem>
-  </items>
-</Table>
+                        <!-- Recipient Email -->
+                        <Text text="{RecipientEmail}"/>
 
+                        <!-- Invoice Type (Icon) -->
+                        <core:Icon
+                            src="{InvoiceTypeIcon}"
+                            decorative="false"/>
+
+                        <!-- Invoice No. -->
+                        <Text text="{InvoiceNo}"/>
+
+                        <!-- Netto / Brutto -->
+                        <ObjectNumber number="{NettoValue}"/>
+                        <ObjectNumber number="{BruttoValue}"/>
+
+                        <!-- CCY -->
+                        <Text text="{Currency}"/>
+
+                        <!-- Sales Org -->
+                        <Text text="{alesOrg}"/>
+
+                        <!-- Reference -->
+                        <Text text="{Reference}"/>
+
+                        <!-- Dates -->
+                        <Text text="{CreationDate}"/>
+                        <Text text="{DispatchDate}"/>
+
+                        <!-- Transfer Format / Delivery -->
+                        <Text text="{TransferFormat}"/>
+                        <Text text="{DeliveryMethod}"/>
+
+                        <!-- Delivery ID -->
+                        <Text text="{DeliveryId}"/>
+
+                        <!-- PDF yes/no -->
+                        <Text text="{PdfAvailable}"/>
+                    </cells>
+                </ColumnListItem>
+            </items>
+    </Table>
+</content>
     </Page>
 </mvc:View>
