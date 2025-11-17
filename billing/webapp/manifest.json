@@ -38,7 +38,8 @@
       "minUI5Version": "1.142.0",
       "libs": {
         "sap.m": {},
-        "sap.ui.core": {}
+        "sap.ui.core": {},
+        "sap.f": {}
       }
     },
     "contentDensities": {
@@ -51,7 +52,11 @@
         "settings": {
           "bundleName": "billing.i18n.i18n"
         }
-      }
+      },
+    "": {
+      "type": "sap.ui.model.json.JSONModel",
+      "uri": "model/mockData.json"
+    }
     },
     "resources": {
       "css": [
@@ -63,8 +68,9 @@
     "routing": {
       "config": {
         "routerClass": "sap.m.routing.Router",
-        "controlAggregation": "pages",
-        "controlId": "app",
+        "controlId": "layout",
+        "controlAggregation": "beginColumnPages",
+        "clearControlAggregation": true,
         "transition": "slide",
         "type": "View",
         "viewType": "XML",
@@ -75,16 +81,29 @@
       "routes": [
         {
           "name": "RouteView1",
-          "pattern": ":?query:",
+          "pattern": "",
           "target": [
             "TargetView1"
           ]
-        }
+        },
+      {
+          "name": "DetailsRoute",
+          "pattern": "Details/{invoiceId}",      
+          "target": ["Details"]
+      }
       ],
       "targets": {
         "TargetView1": {
           "id": "View1",
-          "name": "View1"
+          "name": "View1",
+          "viewLevel": "1",
+          "controlAggregation": "beginColumnPages"
+        },
+        "Details":{
+          "id": "Details",
+          "name": "Details",
+          "viewLevel": 2,
+          "controlAggregation": "midColumnPages"
         }
       }
     },

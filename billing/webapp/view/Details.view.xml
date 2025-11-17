@@ -1,0 +1,14 @@
+<mvc:View controllerName="billing.controller.Details"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m">
+    <Page title="Invoice Details">
+            <headerContent>
+                <Button id="btnClose" icon="sap-icon://decline" type="Transparent" tooltip="Close" press=".onClose" class="detailCloseBtn"/>
+             </headerContent>
+            <content>
+
+                <Text text="Hier kommen die Detailinfos und Anhänge hin..."/>
+        
+            </content>
+    </Page>
+</mvc:View>

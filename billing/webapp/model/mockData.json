@@ -1,0 +1,61 @@
+{
+  "Invoices": [
+    {
+      "StatusIcon": "sap-icon://error",
+      "StatusState": "Error",
+      "RecipientName": "Unternehmen GmbH",
+      "RecipientEmail": "max.mustermann@email.com",
+      "InvoiceTypeIcon": "sap-icon://locked",
+      "InvoiceNo": "LP0268163",
+      "NettoValue": "19.503,26",
+      "BruttoValue": "19.503,26",
+      "Currency": "EUR",
+      "SalesOrg": "LP0268163",
+      "Reference": "Lorem ipsum dolor sit amet con...",
+      "CreationDate": "02/06/2024",
+      "DispatchDate": "02/06/2024",
+      "TransferFormat": "Factur-X",
+      "DeliveryMethod": "Email",
+      "DeliveryId": "01123456-11",
+      "PdfAvailable": "yes"
+    },
+    {
+      "StatusIcon": "sap-icon://error",
+      "StatusState": "Error",
+      "RecipientName": "Accounting Department",
+      "RecipientEmail": "beate.beispiel@firma.com",
+      "InvoiceTypeIcon": "sap-icon://locked",
+      "InvoiceNo": "FQ1225160",
+      "NettoValue": "33.620,26",
+      "BruttoValue": "33.620,26",
+      "Currency": "EUR",
+      "SalesOrg": "FQ1225160",
+      "Reference": "FQ1225160",
+      "CreationDate": "02/19/2024",
+      "DispatchDate": "02/19/2024",
+      "TransferFormat": "Factur-X",
+      "DeliveryMethod": "Postal Service",
+      "DeliveryId": "02897654-Fibu-45",
+      "PdfAvailable": "yes"
+    },
+    {
+      "StatusIcon": "sap-icon://error",
+      "StatusState": "Error",
+      "RecipientName": "Company Industries",
+      "RecipientEmail": "emil.example@company.com",
+      "InvoiceTypeIcon": "sap-icon://locked",
+      "InvoiceNo": "EBD115120",
+      "NettoValue": "23.747,36",
+      "BruttoValue": "23.747,36",
+      "Currency": "EUR",
+      "SalesOrg": "EBD115120",
+      "Reference": "EBD115120",
+      "CreationDate": "02/26/2024",
+      "DispatchDate": "02/26/2024",
+      "TransferFormat": "Factur-X",
+      "DeliveryMethod": "Email",
+      "DeliveryId": "04711000-Hauptamt-01",
+      "PdfAvailable": "no"
+    }
+  ]
+}

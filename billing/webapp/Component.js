@@ -1,7 +1,8 @@
 sap.ui.define([
     "sap/ui/core/UIComponent",
-    "billing/model/models"
-], (UIComponent, models) => {
+    "billing/model/models",
+    "sap/ui/model/json/JSONModel"
+], (UIComponent, models, JSONModel) => {
     "use strict";
 
     return UIComponent.extend("billing.Component", {
@@ -15,6 +16,11 @@ sap.ui.define([
         init() {
             // call the base component's init function
             UIComponent.prototype.init.apply(this, arguments);
+
+            // 🔹 Mockdaten laden
+//            const oModel = new JSONModel();
+//            oModel.loadData("billing/model/mockData.json");
+//           this.setModel(oModel); // Default-Model
 
             // set the device model
             this.setModel(models.createDeviceModel(), "device");
