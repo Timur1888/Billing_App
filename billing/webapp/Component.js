@@ -17,10 +17,6 @@ sap.ui.define([
             // call the base component's init function
             UIComponent.prototype.init.apply(this, arguments);
 
-            // 🔹 Mockdaten laden
-//            const oModel = new JSONModel();
-//            oModel.loadData("billing/model/mockData.json");
-//           this.setModel(oModel); // Default-Model
 
             // set the device model
             this.setModel(models.createDeviceModel(), "device");

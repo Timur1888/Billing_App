@@ -24,7 +24,7 @@ sap.ui.define([
 
             // Layout auf 2 Spalten stellen
             const oMainViewModel = this.getView().getModel("mainView");
-            oMainViewModel.setProperty("/layout", "TwoColumnsMidExpanded");
+            oMainViewModel.setProperty("/layout", "TwoColumnsBeginExpanded");
 
             // Router holen und zur Details-Route navigieren
             const oRouter = UIComponent.getRouterFor(this);

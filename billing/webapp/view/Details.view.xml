@@ -1,14 +1,155 @@
-<mvc:View controllerName="billing.controller.Details"
+<mvc:View
+    controllerName="billing.controller.Details"
     xmlns:mvc="sap.ui.core.mvc"
-    xmlns="sap.m">
-    <Page title="Invoice Details">
-            <headerContent>
-                <Button id="btnClose" icon="sap-icon://decline" type="Transparent" tooltip="Close" press=".onClose" class="detailCloseBtn"/>
-             </headerContent>
-            <content>
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core">
 
-                <Text text="Hier kommen die Detailinfos und Anhänge hin..."/>
-        
-            </content>
+    <Page title="Panel Title" showFooter="true">  
+        <!-- X-Schließen-Button rechts oben -->
+        <headerContent>
+            <Button
+                id="btnClose"
+                icon="sap-icon://decline"
+                type="Transparent"
+                tooltip="Close"
+                press=".onClose"
+                class="detailCloseBtn"/>
+        </headerContent>
+
+        <content>
+            <!-- Tabs: Overview / History -->
+            <IconTabBar
+                id="itbDetails"
+                expanded="true"
+                upperCase="false"
+                selectedKey="overview">
+
+                <items>
+
+                    <!-- ================== OVERVIEW TAB ================== -->
+                    <IconTabFilter key="overview" text="Overview">
+                        <VBox
+                            width="100%"
+                            class="sapUiSmallMargin">
+
+                            <!-- Upload (Attachments) -->
+                            <Title text="Upload (Attachments)" level="H4"/>
+
+                            <!-- Invoice File -->
+                            <VBox class="sapUiSmallMarginTop" width="97%">
+                                <Input
+                                    placeholder="Browse or drop a invoice file"
+                                    showValueHelp="true"
+                                    valueHelpOnly="true"
+                                    valueHelpIconSrc="sap-icon://add-document"
+                                    class="sapUiTinyMarginBottom"/>
+
+                                
+                                <List inset="false">
+                                    <StandardListItem title="invoice.pdf"/>
+                                    <StandardListItem title="example.pdf"/>
+                                </List>
+                            </VBox>
+
+                            <!-- Attachments -->
+                            <VBox class="sapUiSmallMarginTop" width="97%">
+                                <Input
+                                    placeholder="Browse or drop attachments"
+                                    showValueHelp="true"
+                                    valueHelpOnly="true"
+                                    valueHelpIconSrc="sap-icon://add-document"
+                                    class="sapUiTinyMarginBottom"/>
+                                
+                                <List inset="false">
+                                    <StandardListItem title="example.pdf"/>
+                                    <StandardListItem title="attachment.jpg"/>
+                                    <StandardListItem title="attachment.jpg"/>
+                                    <StandardListItem title="attachment.jpg"/>
+                                </List>
+                            </VBox>
+
+                            <!-- Output -->
+                            <Title text="Output" level="H4" class="sapUiMediumMarginTop"/>
+
+                            <VBox class="sapUiSmallMarginTop" width="97%">
+                                
+                                <Select width="100%" class="sapUiSmallMarginBottom">
+                                    <items>
+                                        <core:Item key="transF" text="Transfer Format"/>
+                                        <core:Item key="fx" text="Factur-X"/>
+                                        <core:Item key="pdf" text="PDF"/>
+                                    </items>
+                                </Select>
+
+                                
+                                <Select width="100%" class="sapUiSmallMarginBottom">
+                                    <items>
+                                        <core:Item key="delMeth" text="Delivery Method"/>
+                                        <core:Item key="email" text="Email"/>
+                                        <core:Item key="post" text="Postal Service"/>
+                                    </items>
+                                </Select>
+
+                                
+                                <Input placeholder="Receiver" class="sapUiSmallMarginBottom"/>
+
+                                
+                                <Input placeholder="CC" class="sapUiSmallMarginBottom"/>
+
+                                
+                                <Input placeholder="BCC" class="sapUiSmallMarginBottom"/>
+                            </VBox>
+
+                            <!-- Job Settings -->
+                            <Title text="Job Settings" level="H4" class="sapUiMediumMarginTop"/>
+
+                                <HBox class="sapUiSmallMarginTop" alignItems="Center">
+                                    <!-- Toggle links -->
+                                    <Switch
+                                        state="true"
+                                        customTextOn=""
+                                        customTextOff=""
+                                        class="sapUiTinyMarginEnd"/>
+
+                                    <!-- Text rechts daneben -->
+                                    <Text text="Manual Dispatch"/>
+                                </HBox>
+
+                            <!-- Templates -->
+                            <Title text="Templates" level="H4" class="sapUiMediumMarginTop"/>
+
+                            <VBox class="sapUiSmallMarginTop">
+                                <Label text="Subject"/>
+
+                                <Button
+                                    text="Edit"
+                                    type="Emphasized"
+                                    class="sapUiTinyMarginTop"
+                                    width="3rem"/>
+                            </VBox>
+
+                        </VBox>
+                    </IconTabFilter>
+
+                    <!-- ================== HISTORY TAB ================== -->
+                    <IconTabFilter key="history" text="History">
+                        <VBox class="sapUiSmallMargin">
+                            <Text text="History-Inhalt kommt später hier hin..."/>
+                        </VBox>
+                    </IconTabFilter>
+
+                </items>
+            </IconTabBar>
+        </content>
+
+        <!-- Footer mit Save / Send -->
+        <footer>
+            <Toolbar>
+                <ToolbarSpacer/>
+                <Button text="Save" type="Transparent"/>
+                <Button text="Send" type="Emphasized" class="sendButton"/>
+            </Toolbar>
+        </footer>
+
     </Page>
 </mvc:View>

@@ -14,7 +14,7 @@ sap.ui.define([
 
         // Layout sicherstellen
         const oMainViewModel = this.getView().getModel("mainView");
-        oMainViewModel.setProperty("/layout", "TwoColumnsMidExpanded");
+        oMainViewModel.setProperty("/layout", "TwoColumnsBeginExpanded");
 
         // Einfaches Beispiel: wir suchen im bestehenden Modell nach der passenden Rechnung
       const oModel = this.getView().getModel();
