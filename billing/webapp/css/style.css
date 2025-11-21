@@ -4,3 +4,9 @@
   color: var(--sapButton_TextColor);
   font-family: var(--sapFontFamily);
 }
+
+/* Fokusrahmen im Filter-Popover verstecken */
+.filterPopoverList .sapMLIB.sapMLIBFocusable:focus {
+    outline: none;
+    box-shadow: none;
+}

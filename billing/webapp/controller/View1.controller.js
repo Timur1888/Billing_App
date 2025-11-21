@@ -31,6 +31,43 @@ sap.ui.define([
             oRouter.navTo("DetailsRoute", {
                 invoiceId: sInvoiceId
       });
-    }         
+    },
+    _createFilterPopover: function () {
+        if (!this._oFilterPopover) {
+
+            // Liste zuerst in eine Variable packen
+            var oList = new sap.m.List({
+                items: [
+                    new sap.m.StandardListItem({
+                        title: "Add Filter",
+                        type: "Navigation",
+                        icon: "sap-icon://add"
+                        // press-Handler später
+                    })
+                ]
+            });
+
+            // eigene CSS-Klasse für Fokus-Styling
+            oList.addStyleClass("filterPopoverList");
+
+            this._oFilterPopover = new sap.m.Popover({
+                placement: sap.m.PlacementType.Bottom,
+                showHeader: false,
+                contentWidth: "200px",
+                content: [oList]
+            });
+
+            this.getView().addDependent(this._oFilterPopover);
+        }
+
+        return this._oFilterPopover;
+    },
+
+    onFilter: function (oEvent) {
+        const oButton = oEvent.getSource();
+        const oPopover = this._createFilterPopover();
+        oPopover.openBy(oButton);
+    }
+            
     });
 });
