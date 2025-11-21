@@ -41,8 +41,8 @@ sap.ui.define([
                     new sap.m.StandardListItem({
                         title: "Add Filter",
                         type: "Navigation",
-                        icon: "sap-icon://add"
-                        // press-Handler später
+                        icon: "sap-icon://add",
+                        press: this.onAddFilterPress.bind(this)
                     })
                 ]
             });
@@ -62,6 +62,93 @@ sap.ui.define([
 
         return this._oFilterPopover;
     },
+
+    onAddFilterPress: function () {
+        this._oFilterPopover.close();
+
+        if (!this._oFilterDialog) {
+            this._sFilterFragmentId = "filterDialogFragment";
+
+            this._oFilterDialog = sap.ui.xmlfragment(
+                this._sFilterFragmentId,
+                "billing.view.FilterDialog",
+                this
+            );
+            this.getView().addDependent(this._oFilterDialog);
+        }
+
+        this._resetFilterDialogFields();  // Grundzustand
+        this._oFilterDialog.open();
+    },
+
+
+
+    onFilterFieldChange: function (oEvent) {
+        var sKey    = oEvent.getSource().getSelectedKey();
+        var oBoxPH  = sap.ui.core.Fragment.byId(this._sFilterFragmentId, "boxValuePlaceholder");
+        var oBoxDate= sap.ui.core.Fragment.byId(this._sFilterFragmentId, "boxDateRange");
+        var oBoxInv = sap.ui.core.Fragment.byId(this._sFilterFragmentId, "boxInvoiceNo");
+
+        // Platzhalter ausblenden
+        oBoxPH.setVisible(false);
+
+        if (sKey === "CREATION_DATE") {
+            oBoxDate.setVisible(true);
+            oBoxInv.setVisible(false);
+        } else if (sKey === "INVOICE_NO") {
+            oBoxDate.setVisible(false);
+            oBoxInv.setVisible(true);
+        } else {
+            // falls nichts gewählt wurde (zur Sicherheit)
+            oBoxPH.setVisible(true);
+            oBoxDate.setVisible(false);
+            oBoxInv.setVisible(false);
+        }
+    },
+
+
+    onFilterDialogCancel: function () {
+        this._resetFilterDialogFields();
+        this._oFilterDialog.close();
+    },
+
+    onFilterDialogSave: function () {
+        // hier später Filterwerte auslesen & Tabelle filtern
+        // jetzt NUR UI: Dialog schließen
+        if (this._oFilterDialog) {
+            this._oFilterDialog.close();
+        }
+    },
+
+_resetFilterDialogFields: function () {
+    if (!this._oFilterDialog) {
+        return;
+    }
+
+    var oSelect   = sap.ui.core.Fragment.byId(this._sFilterFragmentId, "selFilterField");
+    var oBoxPH    = sap.ui.core.Fragment.byId(this._sFilterFragmentId, "boxValuePlaceholder");
+    var oBoxDate  = sap.ui.core.Fragment.byId(this._sFilterFragmentId, "boxDateRange");
+    var oBoxInv   = sap.ui.core.Fragment.byId(this._sFilterFragmentId, "boxInvoiceNo");
+    var oDrs      = sap.ui.core.Fragment.byId(this._sFilterFragmentId, "drsCreationDate");
+    var oInpInv   = sap.ui.core.Fragment.byId(this._sFilterFragmentId, "inpInvoiceNo");
+
+    // links: keine Auswahl
+    oSelect.setSelectedKey("");
+
+    // Werte löschen
+    if (oDrs) {
+        oDrs.setValue(""); // setzt DateRangeSelection zurück
+    }
+    if (oInpInv) {
+        oInpInv.setValue("");
+    }
+
+    // rechts: nur Platzhalter anzeigen
+    oBoxPH.setVisible(true);
+    oBoxDate.setVisible(false);
+    oBoxInv.setVisible(false);
+},
+
 
     onFilter: function (oEvent) {
         const oButton = oEvent.getSource();

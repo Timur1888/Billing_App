@@ -1,0 +1,75 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core">
+
+    <Dialog
+        id="filterDialog"
+        title="Select Filter"
+        icon="sap-icon://message-information"
+        horizontalScrolling="false"
+        verticalScrolling="true"
+        contentWidth="32rem">
+
+        <content>
+            <VBox class="sapUiLargeMargin">
+
+                <HBox width="100%" justifyContent="SpaceBetween">
+                    <!-- links: Select Filter -->
+                    <VBox width="48%">
+                        <Label text="Select Filter" class="sapUiTinyMarginBottom"/>
+                        <Select
+                            id="selFilterField"
+                            width="100%"
+                            forceSelection="false"
+                            selectedKey=""
+                            change=".onFilterFieldChange">
+                            <items>
+                                <core:Item key="CREATION_DATE" text="Creation Date"/>
+                                <core:Item key="INVOICE_NO" text="Invoice No."/>
+                            </items>
+                        </Select>
+                    </VBox>
+
+                    <!-- rechts: Platzhalter "Filter Type" (disabled) -->
+                    <VBox id="boxValuePlaceholder" width="48%">
+                        <Label text="Filter Type" class="sapUiTinyMarginBottom"/>
+                        <Select width="100%" enabled="false">
+                            <items>
+                                <core:Item key="" text="Filter Type"/>
+                            </items>
+                        </Select>
+                    </VBox>
+
+                    <!-- rechts: Date Range (sichtbar nach Auswahl Creation Date) -->
+                    <VBox id="boxDateRange" width="48%" visible="false">
+                        <Label text="Date Range" class="sapUiTinyMarginBottom"/>
+                        <DateRangeSelection
+                            id="drsCreationDate"
+                            displayFormat="dd.MM.yyyy"
+                            delimiter=" - "
+                            width="100%"/>
+                    </VBox>
+
+                    <!-- rechts: Invoice No. (sichtbar nach Auswahl Invoice No.) -->
+                    <VBox id="boxInvoiceNo" width="48%" visible="false">
+                        <Label text="Invoice No." class="sapUiTinyMarginBottom"/>
+                        <Input
+                            id="inpInvoiceNo"
+                            placeholder="Enter invoice number"
+                            width="100%"/>
+                    </VBox>
+                </HBox>
+
+            </VBox>
+        </content>
+
+        <beginButton>
+            <Button text="Cancel" press=".onFilterDialogCancel"/>
+        </beginButton>
+
+        <endButton>
+            <Button text="Save" type="Emphasized" press=".onFilterDialogSave"/>
+        </endButton>
+
+    </Dialog>
+</core:FragmentDefinition>
