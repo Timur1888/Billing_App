@@ -34,22 +34,22 @@
       items="{/Invoices}"
       itemPress=".onInvoicePress">
             <columns>
-                <Column><Text text="Status"/></Column>
-                <Column><Text text="Recipient Name"/></Column>
-                <Column><Text text="Recipient Email"/></Column>
-                <Column hAlign="Center"><Text text="Invoice Type"/></Column>
-                <Column><Text text="Invoice No."/></Column>
-                <Column hAlign="End"><Text text="Netto Value"/></Column>
-                <Column hAlign="End"><Text text="Brutto Value"/></Column>
-                <Column><Text text="CCY"/></Column>
-                <Column><Text text="Sales Org"/></Column>
-                <Column><Text text="Reference"/></Column>
-                <Column><Text text="Creation Date"/></Column>
-                <Column><Text text="Dispatch Date"/></Column>
-                <Column><Text text="Transfer Format"/></Column>
-                <Column><Text text="Delivery Method"/></Column>
-                <Column><Text text="Delivery ID"/></Column>
-                <Column><Text text="PDF"/></Column>
+                <Column id="colStatus"><Text text="Status"/></Column>
+                <Column id="colRecipientName"><Text text="Recipient Name"/></Column>
+                <Column id="colRecipientEmail"><Text text="Recipient Email"/></Column>
+                <Column id="colInvoiceType" hAlign="Center"><Text text="Invoice Type"/></Column>
+                <Column id="colInvoiceNo"><Text text="Invoice No."/></Column>
+                <Column id="colNettoValue" hAlign="End"><Text text="Netto Value"/></Column>
+                <Column id="colBruttoValue" hAlign="End"><Text text="Brutto Value"/></Column>
+                <Column id="colCCY"><Text text="CCY"/></Column>
+                <Column id="colSalesOrg"><Text text="Sales Org"/></Column>
+                <Column id="colReference"><Text text="Reference"/></Column>
+                <Column id="colCreationDate"><Text text="Creation Date"/></Column>
+                <Column id="colDispatchDate"><Text text="Dispatch Date"/></Column>
+                <Column id="colTransferFormat"><Text text="Transfer Format"/></Column>
+                <Column id="colDeliveryMethod"><Text text="Delivery Method"/></Column>
+                <Column id="colDeliveryId"><Text text="Delivery ID"/></Column>
+                <Column id="colPDF"><Text text="PDF"/></Column>
             </columns>
 
             <!-- Zellen / Items (an Mockdaten gebunden) -->

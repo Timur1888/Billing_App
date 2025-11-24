@@ -304,7 +304,58 @@ _resetFilterDialogFields: function () {
         const oButton = oEvent.getSource();
         const oPopover = this._createFilterPopover();
         oPopover.openBy(oButton);
+    },
+
+
+    _createColumnSettingsPopover: function () {
+    if (this._oColumnPopover) {
+        return this._oColumnPopover;
     }
+
+    const oTable = this.byId("tblBilling");
+    const aColumns = oTable.getColumns();
+
+    // Liste mit Checkboxen erzeugen
+    const oList = new sap.m.List({
+        items: aColumns.map(col => {
+            const sColId = col.getId();
+            const sColLabel = col.getHeader().getText();
+
+            return new sap.m.CustomListItem({
+                content: new sap.m.HBox({
+                    items: [
+                        new sap.m.CheckBox({
+                            selected: true,
+                            text: sColLabel,
+                            select: (oEvent) => {
+                                const bSelected = oEvent.getParameter("selected");
+                                col.setVisible(bSelected);
+                            }
+                        }).addStyleClass("sapUiSmallMarginEnd")
+                    ]
+                })
+            });
+        })
+    });
+
+    this._oColumnPopover = new sap.m.Popover({
+        placement: sap.m.PlacementType.Bottom,
+        title: "Columns",
+        contentWidth: "250px",
+        content: oList
+    });
+
+    this.getView().addDependent(this._oColumnPopover);
+
+    return this._oColumnPopover;
+},
+
+    onSettings: function (oEvent) {
+        const oPopover = this._createColumnSettingsPopover();
+        oPopover.openBy(oEvent.getSource());
+    }
+
+
             
     });
 });
