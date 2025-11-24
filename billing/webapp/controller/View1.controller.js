@@ -87,18 +87,19 @@ sap.ui.define([
     this._addEmptyFilterRow();
     },
 
-    _addEmptyFilterRow: function () {
+_addEmptyFilterRow: function () {
     const oContainer = sap.ui.core.Fragment.byId(this._sFilterFragmentId, "filtersContainer");
 
     // äußere Zeile
     const oRow = new sap.m.HBox({
         width: "100%",
         justifyContent: "SpaceBetween",
+        alignItems: "End",
         class: "sapUiSmallMarginBottom"
     });
 
     // ===== links: Select Filter =====
-    const oLeftBox = new sap.m.VBox({ width: "48%" });
+    const oLeftBox = new sap.m.VBox({ width: "45%" });
     oLeftBox.addItem(new sap.m.Label({
         text: "Select Filter",
         class: "sapUiTinyMarginBottom"
@@ -106,9 +107,9 @@ sap.ui.define([
 
     const oSelect = new sap.m.Select({
         width: "100%",
-        selectedKey: "",
-        forceSelection: false,
-        change: this.onFilterFieldChange.bind(this)  // Handler unten
+        selectedKey: "",        // initial leer
+        forceSelection: false,  // leer erlaubt
+        change: this.onFilterFieldChange.bind(this)
     });
 
     oSelect.addItem(new sap.ui.core.Item({
@@ -122,8 +123,8 @@ sap.ui.define([
 
     oLeftBox.addItem(oSelect);
 
-    // ===== rechts: Platzhalter + DateRange + Input =====
-    const oRightBox = new sap.m.VBox({ width: "48%" });
+    // ===== Mitte: Platzhalter / DateRange / InvoiceNo =====
+    const oRightBox = new sap.m.VBox({ width: "45%" });
 
     // Platzhalter "Filter Type"
     const oPlaceholderBox = new sap.m.VBox();
@@ -170,6 +171,14 @@ sap.ui.define([
     oRightBox.addItem(oDateBox);
     oRightBox.addItem(oInvoiceBox);
 
+    // ===== rechts: X-Button zum Löschen =====
+    const oDeleteBtn = new sap.m.Button({
+        icon: "sap-icon://decline",
+        type: "Transparent",
+        tooltip: "Remove filter",
+        press: this.onFilterRowDelete.bind(this)
+    });
+
     // Referenzen am Row-Objekt speichern, damit wir sie im Change-Handler finden
     oRow.data("placeholderBoxId", oPlaceholderBox.getId());
     oRow.data("dateBoxId", oDateBox.getId());
@@ -178,25 +187,60 @@ sap.ui.define([
     // komplette Zeile zusammensetzen
     oRow.addItem(oLeftBox);
     oRow.addItem(oRightBox);
+    oRow.addItem(oDeleteBtn);
 
     oContainer.addItem(oRow);
+    this._updateDeleteButtons();
+
 },
+
+    _updateDeleteButtons: function () {
+        const oContainer = sap.ui.core.Fragment.byId(this._sFilterFragmentId, "filtersContainer");
+        const aRows = oContainer.getItems();
+        const bEnable = aRows.length > 1;   // mind. 1 Zeile muss bleiben
+
+        aRows.forEach(function (oRow) {
+            const aItems = oRow.getItems();
+            const oBtn = aItems[aItems.length - 1]; // letztes Item ist unser X-Button
+            if (oBtn instanceof sap.m.Button) {
+                oBtn.setEnabled(bEnable);
+            }
+        });
+    },
+
+    onFilterRowDelete: function (oEvent) {
+        const oBtn = oEvent.getSource();
+        const oRow = oBtn.getParent(); // Button sitzt direkt im HBox-Row
+        const oContainer = sap.ui.core.Fragment.byId(this._sFilterFragmentId, "filtersContainer");
+        const aRows = oContainer.getItems();
+
+        // Mindestens eine Zeile muss bleiben
+        if (aRows.length <= 1) {
+            return;
+        }
+
+        oContainer.removeItem(oRow);
+        oRow.destroy();
+
+        this._updateDeleteButtons();
+    },
+
+
 
 
 
     onFilterFieldChange: function (oEvent) {
         const sKey   = oEvent.getSource().getSelectedKey();
-        const oRow   = oEvent.getSource().getParent().getParent(); // Select -> left VBox -> Row(HBox)
-        const oPHBox = sap.ui.getCore().byId(oRow.data("placeholderBoxId"));
+        const oRow   = oEvent.getSource().getParent().getParent(); // Select -> VBox -> HBox
+
+        const oPHBox   = sap.ui.getCore().byId(oRow.data("placeholderBoxId"));
         const oDateBox = sap.ui.getCore().byId(oRow.data("dateBoxId"));
         const oInvBox  = sap.ui.getCore().byId(oRow.data("invoiceBoxId"));
 
-        // rechts die passende Eingabe anzeigen
         oPHBox.setVisible(false);
         oDateBox.setVisible(sKey === "CREATION_DATE");
         oInvBox.setVisible(sKey === "INVOICE_NO");
 
-        // Wenn dies die letzte Zeile ist und ein Filter gewählt wurde -> neue leere Zeile anhängen
         if (sKey) {
             const oContainer = sap.ui.core.Fragment.byId(this._sFilterFragmentId, "filtersContainer");
             const aRows = oContainer.getItems();
@@ -207,6 +251,7 @@ sap.ui.define([
             }
         }
     },
+
 
 
 

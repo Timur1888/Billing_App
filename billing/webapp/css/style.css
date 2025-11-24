@@ -10,3 +10,7 @@
     outline: none;
     box-shadow: none;
 }
+
+.filterDeleteBtn {
+    margin-bottom: 0.2rem; /* feinjustieren nach Geschmack */
+}
