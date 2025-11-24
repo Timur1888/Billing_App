@@ -197,25 +197,34 @@ _addEmptyFilterRow: function () {
     _updateDeleteButtons: function () {
         const oContainer = sap.ui.core.Fragment.byId(this._sFilterFragmentId, "filtersContainer");
         const aRows = oContainer.getItems();
-        const bEnable = aRows.length > 1;   // mind. 1 Zeile muss bleiben
+        const iLastIndex = aRows.length - 1;
 
-        aRows.forEach(function (oRow) {
+        aRows.forEach(function (oRow, iIndex) {
             const aItems = oRow.getItems();
-            const oBtn = aItems[aItems.length - 1]; // letztes Item ist unser X-Button
+            const oBtn = aItems[aItems.length - 1]; // letztes Item = X-Button
+
             if (oBtn instanceof sap.m.Button) {
-                oBtn.setEnabled(bEnable);
+                // Letzte Zeile: NIE löschbar (immer ausgegraut)
+                if (iIndex === iLastIndex) {
+                    oBtn.setEnabled(false);
+                } else {
+                    oBtn.setEnabled(true);
+                }
             }
         });
     },
 
     onFilterRowDelete: function (oEvent) {
         const oBtn = oEvent.getSource();
-        const oRow = oBtn.getParent(); // Button sitzt direkt im HBox-Row
+        const oRow = oBtn.getParent();
         const oContainer = sap.ui.core.Fragment.byId(this._sFilterFragmentId, "filtersContainer");
         const aRows = oContainer.getItems();
 
-        // Mindestens eine Zeile muss bleiben
-        if (aRows.length <= 1) {
+        const iIndex = aRows.indexOf(oRow);
+        const iLastIndex = aRows.length - 1;
+
+        // Letzte Zeile nie löschen
+        if (iIndex === iLastIndex) {
             return;
         }
 
@@ -224,10 +233,6 @@ _addEmptyFilterRow: function () {
 
         this._updateDeleteButtons();
     },
-
-
-
-
 
     onFilterFieldChange: function (oEvent) {
         const sKey   = oEvent.getSource().getSelectedKey();
