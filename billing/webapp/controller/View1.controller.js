@@ -32,6 +32,8 @@ sap.ui.define([
                 invoiceId: sInvoiceId
       });
     },
+
+//--------------------------------------------------------------------------------------Filter-Button---------------------------------------------------------------------------------
     _createFilterPopover: function () {
         if (!this._oFilterPopover) {
 
@@ -305,7 +307,8 @@ _resetFilterDialogFields: function () {
         const oPopover = this._createFilterPopover();
         oPopover.openBy(oButton);
     },
-
+//--------------------------------------------------------------------------------------Filter-Button---------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------Settings-Button---------------------------------------------------------------------------------
 
     _createColumnSettingsPopover: function () {
     if (this._oColumnPopover) {
@@ -354,7 +357,7 @@ _resetFilterDialogFields: function () {
         const oPopover = this._createColumnSettingsPopover();
         oPopover.openBy(oEvent.getSource());
     }
-
+//--------------------------------------------------------------------------------------Settings-Button---------------------------------------------------------------------------------
 
             
     });
