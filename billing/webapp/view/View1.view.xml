@@ -30,7 +30,7 @@
       inset="false"
       alternateRowColors="true"
       sticky="ColumnHeaders"
-      mode="SingleSelectMaster"
+      mode="MultiSelect"
       items="{/Invoices}"
       itemPress=".onInvoicePress">
             <columns>
