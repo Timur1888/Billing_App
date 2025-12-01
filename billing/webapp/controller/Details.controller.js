@@ -9,25 +9,38 @@ sap.ui.define([
             const oRouter = UIComponent.getRouterFor(this);
             oRouter.getRoute("DetailsRoute").attachPatternMatched(this._onRouteMatched, this);
 },
-        _onRouteMatched: function (oEvent) {
-        const sInvoiceId = oEvent.getParameter("arguments").invoiceId;
+      _onRouteMatched: function (oEvent) {
+          const sInvoiceId = oEvent.getParameter("arguments").invoiceId;
 
-        // Layout sicherstellen
-        const oMainViewModel = this.getView().getModel("mainView");
-        oMainViewModel.setProperty("/layout", "TwoColumnsBeginExpanded");
+          // Layout sicherstellen
+          const oMainViewModel = this.getView().getModel("mainView");
+          oMainViewModel.setProperty("/layout", "TwoColumnsBeginExpanded");
 
-        // Einfaches Beispiel: wir suchen im bestehenden Modell nach der passenden Rechnung
-      const oModel = this.getView().getModel();
-      const aInvoices = oModel.getProperty("/Invoices") || [];
-      const oInvoice = aInvoices.find(o => o.InvoiceNo === sInvoiceId);
+          // 👉 Model "testData" holen
+          const oModel = this.getView().getModel("testData");
 
-      if (oInvoice) {
-        // eigenen Pfad im Modell setzen, damit die View binden kann
-        // einfache Variante: wir legen die Daten unter /CurrentInvoice ab
-        oModel.setProperty("/CurrentInvoice", oInvoice);
-        this.getView().bindElement("/CurrentInvoice");
-      }
-            },
+          // Liste liegt unter "/value"
+          const aInvoices = oModel.getProperty("/value") || [];
+
+          // passendes Objekt anhand der Rechnungsnummer suchen
+          const oInvoice = aInvoices.find(function (o) {
+              return o?.MetaData?.Object?.Data?.Basics?.Number?.Value === sInvoiceId;
+              // falls du trimmed hast, hier auch ggf. trim()
+          });
+
+          if (oInvoice) {
+              // Daten im Model unter /CurrentInvoice ablegen
+              oModel.setProperty("/CurrentInvoice", oInvoice);
+
+              // View an diesen Knoten des Models "testData" binden
+              this.getView().bindElement({
+                  path: "/CurrentInvoice",
+                  model: "testData"
+              });
+          } else {
+              console.warn("Keine Rechnung mit ID", sInvoiceId, "gefunden");
+          }
+      },
     onClose: function () {
       const oRouter = UIComponent.getRouterFor(this);
       oRouter.navTo("RouteView1");

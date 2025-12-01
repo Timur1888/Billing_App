@@ -56,9 +56,9 @@
           "bundleName": "billing.i18n.i18n"
         }
       },
-    "": {
+    "testData": {
       "type": "sap.ui.model.json.JSONModel",
-      "uri": "model/mockData.json"
+      "uri": "model/testData.json"
     }
     },
     "resources": {
