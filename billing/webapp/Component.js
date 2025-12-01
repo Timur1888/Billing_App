@@ -25,8 +25,8 @@ sap.ui.define([
 
     _loadBackendData: async function () {
       const tokenUrl = "https://test.app.clarc.com/application/api/v1/iam/oauth/token";
-      const clientId = "36c323c6a3e36b22280897729a32d85c4b38bde2766d7b0f89aa4632b91a2252";
-      const clientSecret = "bb1a956012ac59886de22a089ee90637118861c1bece1157d70e91112a6ba62f";
+      const clientId = localCredentials.clientId;
+      const clientSecret = localCredentials.clientSecret;
       //https://test.app.clarc.com:443/application/api/v1/documenthub/document?$filter=Process/Manager/Type eq 'ccPM_Billing'
       //https://test.app.clarc.com/application/api/v1/documenthub/document?$select=Id,History,Rights,State,MetaData.Object.Data.Basics.Recipient.Name,MetaData.Object.Data.Basics.Recipient.Email,MetaData.Object.Data.Basics.Number.Value,MetaData.Object.Data.Type,MetaData.Object.Data.SubType,MetaData.Object.Data.Amounts.Net.Value,MetaData.Object.Data.Amounts.Gross.Value,MetaData.Object.Data.Amounts.Currency.Value,MetaData.Object.Data.BusinessPartners,History.Created.Date,MetaData.Object.Data.Basics.Date.Value,MetaData.Object.Data.Basics.SendDate,MetaData.Object.Data.Basics.TransferFormat,MetaData.Object.Data.Basics.DeliveryMethod,MetaData.Object.Data.BusinessPartners,MetaData.Blobs,MetaData&$filter=(Process/Manager/Type%20eq%20%27ccPM_Billing%27)&$top=40&$orderby=CreationDate%20desc
       const dataUrl = "https://test.app.clarc.com:443/application/api/v1/documenthub/$metadata";
