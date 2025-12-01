@@ -14,3 +14,12 @@
 .filterDeleteBtn {
     margin-bottom: 0.2rem; /* feinjustieren nach Geschmack */
 }
+
+.hiddenFileUploader {
+  width: 0.1px;
+  height: 0.1px;
+  opacity: 0;
+  overflow: hidden;
+  position: absolute;
+  left: -9999px;   /* aus dem sichtbaren Bereich schieben */
+}

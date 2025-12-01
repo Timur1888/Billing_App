@@ -39,7 +39,8 @@
       "libs": {
         "sap.m": {},
         "sap.ui.core": {},
-        "sap.f": {}
+        "sap.f": {},
+        "sap.ui.unified": {}
       }
     },
     "contentDensities": {
