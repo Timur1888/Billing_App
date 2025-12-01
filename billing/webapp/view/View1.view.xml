@@ -31,7 +31,7 @@
       alternateRowColors="true"
       sticky="ColumnHeaders"
       mode="SingleSelectMaster"
-      items="{/Invoices}"
+      items="{testData>/value}"
       itemPress=".onInvoicePress">
             <columns>
                 <Column><Text text="Status"/></Column>
@@ -53,55 +53,71 @@
             </columns>
 
             <!-- Zellen / Items (an Mockdaten gebunden) -->
-            <items>
+                        <items>
                 <ColumnListItem type="Active">
-                    <cells>
-                        <!-- Status -->
-                        <ObjectStatus
-                            icon="{StatusIcon}"
-                            state="{StatusState}"/>
-                            
-                        <!-- Recipient Name -->
-                        <Text text="{RecipientName}"/>
+                <cells>
+                    <!-- Status -->
+                    <ObjectStatus
+                    text="{testData>State}"/>
 
-                        <!-- Recipient Email -->
-                        <Text text="{RecipientEmail}"/>
+                    <!-- Recipient Name -->
+                    <Text text="{testData>MetaData/Object/Data/Basics/Recipient/Name}" />
 
-                        <!-- Invoice Type (Icon) -->
-                        <core:Icon
-                            src="{InvoiceTypeIcon}"
-                            decorative="false"/>
+                    <!-- Recipient Email -->
+                    <Text text="{testData>MetaData/Object/Data/Basics/Recipient/Email/0/Address}" />
 
-                        <!-- Invoice No. -->
-                        <Text text="{InvoiceNo}"/>
+                    <!-- Invoice Type -->
+                    <Text text="{
+                    path: 'testData>MetaData/Object/Data/Type',
+                    formatter: '.formatInvoiceType'
+                    }" />
 
-                        <!-- Netto / Brutto -->
-                        <ObjectNumber number="{NettoValue}"/>
-                        <ObjectNumber number="{BruttoValue}"/>
+                    <!-- Invoice No. -->
+                    <Text text="{testData>MetaData/Object/Data/Basics/Number/Value}" />
 
-                        <!-- CCY -->
-                        <Text text="{Currency}"/>
+                    <!-- Netto / Brutto -->
+                    <ObjectNumber number="{testData>MetaData/Object/Data/Amounts/Net/Value}" />
+                    <ObjectNumber number="{testData>MetaData/Object/Data/Amounts/Gross/Value}" />
 
-                        <!-- Sales Org -->
-                        <Text text="{alesOrg}"/>
+                    <!-- CCY -->
+                    <Text text="{
+                    path: 'testData>MetaData/Object/Data/Amounts/Currency/Value',
+                    formatter: '.formatCurrency'
+                    }" />
 
-                        <!-- Reference -->
-                        <Text text="{Reference}"/>
+                    <!-- Sales Org (erster BusinessPartner) -->
+                    <Text text="{testData>MetaData/Object/Data/BusinessPartners/0/SalesOrganisation/Value}" />
 
-                        <!-- Dates -->
-                        <Text text="{CreationDate}"/>
-                        <Text text="{DispatchDate}"/>
+                    <!-- Creation Date -->
+                    <Text text="{
+                    path: 'testData>History/Created/Date/$date',
+                    formatter: '.formatDate'
+                    }" />
 
-                        <!-- Transfer Format / Delivery -->
-                        <Text text="{TransferFormat}"/>
-                        <Text text="{DeliveryMethod}"/>
+                    <!-- Dispatch Date -->
+                    <Text text="{
+                    path: 'testData>MetaData/Object/Data/Basics/SendDate/$date',
+                    formatter: '.formatDate'
+                    }" />
 
-                        <!-- Delivery ID -->
-                        <Text text="{DeliveryId}"/>
+                    <!-- Transfer Format -->
+                    <Text text="{testData>MetaData/Object/Data/Basics/TransferFormat}" />
 
-                        <!-- PDF yes/no -->
-                        <Text text="{PdfAvailable}"/>
-                    </cells>
+                    <!-- Delivery Method -->
+                    <Text text="{
+                    path: 'testData>MetaData/Object/Data/Basics/DeliveryMethod',
+                    formatter: '.formatDeliveryMethod'
+                    }" />
+
+                    <!-- Leitweg ID (z. B. zweiter Partner) -->
+                    <Text text="{testData>MetaData/Object/Data/BusinessPartners/1/LeitwegId/Value}" />
+
+                    <!-- PDF -->
+                    <Text text="{
+                    path: 'testData>MetaData/Object/Data/Basics/TransferFormat',
+                    formatter: '.formatPdf'
+                    }" />
+                </cells>
                 </ColumnListItem>
             </items>
     </Table>
