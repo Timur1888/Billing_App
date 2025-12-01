@@ -1,8 +1,10 @@
 sap.ui.define([
     "sap/ui/core/mvc/Controller",
     "sap/ui/core/UIComponent",
-    "sap/ui/model/json/JSONModel"
-], (Controller, UIComponent, JSONModel ) => {
+    "sap/ui/model/json/JSONModel",
+    "sap/ui/core/format/NumberFormat",
+    "sap/ui/core/Locale"
+], (Controller, UIComponent, JSONModel, NumberFormat, Locale ) => {
     "use strict";
 
     return Controller.extend("billing.controller.View1", {
@@ -367,7 +369,7 @@ _resetFilterDialogFields: function () {
         const oPopover = this._createColumnSettingsPopover();
         oPopover.openBy(oEvent.getSource());
     },
-//--------------------------------------------------------------------------------------Formatter for Table Data---------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------Formatters for Table Data---------------------------------------------------------------------------------
         // --- Formatter für Type ccIT_* -> * ---
     formatInvoiceType: function (sType) {
       if (!sType) { return ""; }
@@ -403,6 +405,28 @@ _resetFilterDialogFields: function () {
       // Beispiel: wenn bestimmtes Format gesetzt ist -> "PDF"
       // hier kannst du deine Logik einbauen
       return sTransferFormat.indexOf("PDF") !== -1 ? "Ja" : "Nein";
-    }
+
+    },
+        formatCurrencyValue: function (vNumber) {
+        // null/undefined abfangen
+        if (vNumber == null) {
+            return "";
+        }
+
+        // Locale-Objekt für Deutsch
+        var oLocale = new Locale("de-DE");
+
+        // Währungsformatter holen
+        var oFormatter = NumberFormat.getCurrencyInstance({
+            currencyCode: false,      // Symbol statt "EUR"
+            showMeasure: true,        // € anzeigen
+            maxFractionDigits: 2,
+            minFractionDigits: 2
+        }, oLocale);
+
+        // Zahl formatieren – "EUR" liefert dann "€" im deutschen Locale
+        return oFormatter.format(vNumber, "EUR");
+    },
+
     });
 });
