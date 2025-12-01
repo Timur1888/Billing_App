@@ -43,7 +43,7 @@
                 <Column hAlign="End"><Text text="Brutto Value"/></Column>
                 <Column><Text text="CCY"/></Column>
                 <Column><Text text="Sales Org"/></Column>
-                <Column><Text text="Reference"/></Column>
+                <Column><Text text="Factura Date"/></Column>
                 <Column><Text text="Creation Date"/></Column>
                 <Column><Text text="Dispatch Date"/></Column>
                 <Column><Text text="Transfer Format"/></Column>
@@ -91,6 +91,12 @@
                     <!-- Creation Date -->
                     <Text text="{
                     path: 'testData>History/Created/Date/$date',
+                    formatter: '.formatDate'
+                    }" />
+
+                    <!-- Factura Date -->
+                    <Text text="{
+                    path: 'testData>MetaData/Object/Data/Basics/Date/Value/$date',
                     formatter: '.formatDate'
                     }" />
 
