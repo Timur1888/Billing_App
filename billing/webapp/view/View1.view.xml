@@ -76,8 +76,16 @@
                     <Text text="{testData>MetaData/Object/Data/Basics/Number/Value}" />
 
                     <!-- Netto / Brutto -->
-                    <ObjectNumber number="{testData>MetaData/Object/Data/Amounts/Net/Value}" />
-                    <ObjectNumber number="{testData>MetaData/Object/Data/Amounts/Gross/Value}" />
+                    <ObjectNumber
+                    number="{
+                        path: 'testData>MetaData/Object/Data/Amounts/Net/Value',
+                        formatter: '.formatCurrencyValue'
+                    }" />
+                    <ObjectNumber
+                        number="{
+                            path: 'testData>MetaData/Object/Data/Amounts/Gross/Value',
+                            formatter: '.formatCurrencyValue'
+                        }" />
 
                     <!-- CCY -->
                     <Text text="{
