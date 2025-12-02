@@ -384,6 +384,28 @@ _resetFilterDialogFields: function () {
         const oPopover = this._createFilterPopover();
         oPopover.openBy(oButton);
     },
+
+    formatStatusIcon: function (sState) {
+    switch (sState) {
+        case "ccDS_Finished":
+            return "sap-icon://paper-plane";
+        case "ccDS_UserAction":
+            return "sap-icon://action";
+        default:
+            return "sap-icon://question-mark";
+    }
+    },
+
+    formatStatusState: function (sState) {
+        switch (sState) {
+            case "ccDS_Finished":
+                return sap.ui.core.ValueState.Success;  // grün
+            case "ccDS_UserAction":
+                return sap.ui.core.ValueState.Warning;  // gelb/orange
+            default:
+                return sap.ui.core.ValueState.None;     // grau
+        }
+    },
 //--------------------------------------------------------------------------------------Settings-Button---------------------------------------------------------------------------------
 
     _createColumnSettingsPopover: function () {

@@ -61,8 +61,17 @@
                 <ColumnListItem type="Active">
                 <cells>
                     <!-- Status -->
-                    <ObjectStatus
-                    text="{testData>State}"/>
+                   <ObjectStatus
+                        text=""
+                        icon="{
+                            path: 'testData>State',
+                            formatter: '.formatStatusIcon'
+                        }"
+                        state="{
+                            path: 'testData>State',
+                            formatter: '.formatStatusState'
+                        }"
+                    />
 
                     <!-- Recipient Name -->
                     <Text text="{testData>MetaData/Object/Data/Basics/Recipient/Name}" />
