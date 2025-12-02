@@ -20,8 +20,11 @@
       <!-- Icons links von der Suche -->
     <Button id="btnSettings" icon="sap-icon://action-settings" press=".onSettings"/>
     <Button id="btnFilter" icon="sap-icon://filter" press=".onFilter"/>
-    <SearchField id="sfSearch" width="18rem" placeholder="Search"
-                 liveChange=".onSearchLive"/>
+    <SearchField
+        id="sfSearch"
+        width="18rem"
+        placeholder="Search"
+        search=".onSearch" />
   </OverflowToolbar>
 </customHeader>
  <content>

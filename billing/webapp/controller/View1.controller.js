@@ -15,8 +15,72 @@ sap.ui.define([
             console.log("testData:", oModel && oModel.getData());
         },
 
-        onCreate() {},          
-        onSearchLive() {},      
+        onCreate() {},
+
+        onSearch: function (oEvent) {
+            const sQuery = oEvent.getParameter("query")?.trim().toLowerCase();
+            const oTable = this.byId("tblBilling");
+            const oBinding = oTable.getBinding("items");
+
+            if (!oBinding) {
+                return;
+            }
+
+            // Wenn Suchfeld leer → alle anzeigen
+            if (!sQuery) {
+                oBinding.filter([]);
+                return;
+            }
+
+            // --- Filter definieren ---
+            const aFilters = [
+                new sap.ui.model.Filter({
+                    path: "MetaData/Object/Data/Basics/Number/Value",
+                    operator: sap.ui.model.FilterOperator.Contains,
+                    value1: sQuery
+                }),
+                new sap.ui.model.Filter({
+                    path: "MetaData/Object/Data/Basics/Recipient/Name",
+                    operator: sap.ui.model.FilterOperator.Contains,
+                    value1: sQuery
+                }),
+                new sap.ui.model.Filter({
+                    path: "MetaData/Object/Data/Basics/Recipient/Email/0/Address",
+                    operator: sap.ui.model.FilterOperator.Contains,
+                    value1: sQuery
+                })
+            ];
+
+            const oCombinedFilter = new sap.ui.model.Filter({
+                filters: aFilters,
+                and: false
+            });
+
+            // --- Precheck: Treffer prüfen ---
+            const aData = this.getOwnerComponent().getModel("testData").getProperty("/value");
+
+            const aMatches = aData.filter(item => {
+                const invoice = String(item.MetaData?.Object?.Data?.Basics?.Number?.Value || "").toLowerCase();
+                const name    = String(item.MetaData?.Object?.Data?.Basics?.Recipient?.Name || "").toLowerCase();
+                const email   = String(item.MetaData?.Object?.Data?.Basics?.Recipient?.Email?.[0]?.Address || "").toLowerCase();
+
+                return (
+                    invoice.includes(sQuery) ||
+                    name.includes(sQuery)    ||
+                    email.includes(sQuery)
+                );
+            });
+
+            // Keine Treffer → Tabelle unverändert lassen
+            if (aMatches.length === 0) {
+                return;
+            }
+
+            // Treffer → Tabelle filtern
+            oBinding.filter(oCombinedFilter);
+        },
+
+            
         onFilter() {},          
         onSettings() {},
         onInvoicePress: function (oEvent) {
