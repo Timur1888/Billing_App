@@ -17,9 +17,62 @@ sap.ui.define([
         onInit: function () {
             var oModel = this.getOwnerComponent().getModel("testData");
             console.log("testData:", oModel && oModel.getData());
+
+            this._oTestDataModel = oModel;
+
+            // falls Daten schon da sind (z.B. lokales JSON)
+            this._backupOriginalData();
+
+            // falls Model asynchron lädt (URL), nach dem Laden nochmal sichern
+            if (oModel && oModel.attachRequestCompleted) {
+                oModel.attachRequestCompleted(this._backupOriginalData, this);
+            }
         },
 
         onCreate: function () {},
+        // ---------------------------------------------------
+        // Refreschen
+        // ---------------------------------------------------
+        onReload: function () {
+            var oModel = this.getOwnerComponent().getModel("testData");
+            var oTable = this.byId("tblBilling");
+
+            if (!oModel || !this._aOriginalData) {
+                console.warn("Keine Originaldaten für Refresh vorhanden");
+                return;
+            }
+
+            // Originaldaten wiederherstellen (deep copy)
+            var aClone = JSON.parse(JSON.stringify(this._aOriginalData));
+            oModel.setProperty("/value", aClone);
+
+            // UI-Zustand zurücksetzen
+            if (oTable) {
+                oTable.removeSelections(true);
+            }
+            var oDeleteButton = this.byId("btnDelete");
+            if (oDeleteButton) {
+                oDeleteButton.setEnabled(false);
+            }
+
+            // Filter-Tokenizer leeren, falls du willst
+            var oTokenizer = this.byId("filterTokenizer");
+            if (oTokenizer) {
+                oTokenizer.removeAllTokens();
+                oTokenizer.setVisible(false);
+            }
+        },
+
+        _backupOriginalData: function () {
+            var oModel = this._oTestDataModel || this.getOwnerComponent().getModel("testData");
+            if (!oModel) { return; }
+
+            var aData = oModel.getProperty("/value");
+            if (aData) {
+                // tiefe Kopie, damit wir später wieder saubere Daten haben
+                this._aOriginalData = JSON.parse(JSON.stringify(aData));
+            }
+        },
         // ---------------------------------------------------
         // Löschen
         // ---------------------------------------------------
