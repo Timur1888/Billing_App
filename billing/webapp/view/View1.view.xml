@@ -28,6 +28,16 @@
   </OverflowToolbar>
 </customHeader>
  <content>
+
+    <!-- Aktive Filter-Chips -->
+    <Tokenizer
+        id="filterTokenizer"
+        visible="false"
+        editable="true"
+        tokenChange=".onFilterTokenChange"
+        class="sapUiSmallMargin" />
+
+
     <Table
       id="tblBilling"
       inset="false"
