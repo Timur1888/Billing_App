@@ -12,7 +12,7 @@
                 <Button id="btnCreate" text="Create" type="Emphasized"
                         class="myCreateBtn" press=".onCreate"/>
                 <Button id="btnDelete" icon="sap-icon://delete" press=".onDelete"
-                        tooltip="Delete selected"/>
+                        tooltip="Delete selected" enabled="false"/>
                 <Button icon="sap-icon://refresh" press="onReload" type="Transparent"/>
 
                 <ToolbarSpacer id="hdrSpacer"/>
@@ -44,7 +44,8 @@
                 sticky="ColumnHeaders"
                 mode="MultiSelect"
                 items="{testData>/value}"
-                itemPress=".onInvoicePress">
+                itemPress=".onInvoicePress"
+                selectionChange=".onSelectionChange">
 
                 <columns>
                     <Column><Text text="Status"/></Column>

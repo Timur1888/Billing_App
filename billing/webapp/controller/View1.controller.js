@@ -5,8 +5,9 @@ sap.ui.define([
     "sap/ui/model/Filter",
     "sap/ui/model/FilterOperator",
     "billing/model/formatter",
-    "billing/util/FilterHelper"
-], function (Controller, UIComponent, JSONModel, Filter, FilterOperator, formatter, FilterHelper) {
+    "billing/util/FilterHelper",
+    "sap/m/MessageBox"
+], function (Controller, UIComponent, JSONModel, Filter, FilterOperator, formatter, FilterHelper, MessageBox) {
     "use strict";
 
     return Controller.extend("billing.controller.View1", {
@@ -19,6 +20,63 @@ sap.ui.define([
         },
 
         onCreate: function () {},
+        // ---------------------------------------------------
+        // Löschen
+        // ---------------------------------------------------
+        onSelectionChange: function (oEvent) {
+            const oTable        = oEvent.getSource();
+            const aSelected     = oTable.getSelectedItems();
+            const oDeleteButton = this.byId("btnDelete");
+
+            oDeleteButton.setEnabled(aSelected.length > 0);
+        },
+        onDelete: function () {
+            const oTable         = this.byId("tblBilling");
+            const aSelectedItems = oTable.getSelectedItems();
+
+            if (!aSelectedItems.length) {
+                return;
+            }
+
+            MessageBox.confirm(
+                `Do you really want to delete ${aSelectedItems.length} item(s)?`,
+                {
+                    title: "Confirm Deletion",
+                    actions: [MessageBox.Action.DELETE, MessageBox.Action.CANCEL],
+                    emphasizedAction: MessageBox.Action.DELETE,
+                    onClose: function (sAction) {
+                        if (sAction !== MessageBox.Action.DELETE) {
+                            return; // Cancel -> nichts tun
+                        }
+
+                        // Model-Daten holen
+                        const oModel = this.getOwnerComponent().getModel("testData");
+                        const aData  = oModel.getProperty("/value") || [];
+
+                        // Indizes der ausgewählten Einträge bestimmen
+                        const aIndices = aSelectedItems.map(function (oItem) {
+                            const oCtx  = oItem.getBindingContext("testData");
+                            const sPath = oCtx.getPath();   // z.B. "/value/3"
+                            return parseInt(sPath.split("/").pop(), 10);
+                        });
+
+                        // Von hinten nach vorne löschen, damit Indizes nicht verrutschen
+                        aIndices
+                            .sort(function (a, b) { return b - a; })
+                            .forEach(function (iIndex) {
+                                aData.splice(iIndex, 1);
+                            });
+
+                        // Model aktualisieren
+                        oModel.setProperty("/value", aData);
+
+                        // Auswahl & Button zurücksetzen
+                        oTable.removeSelections(true);
+                        this.byId("btnDelete").setEnabled(false);
+                    }.bind(this)
+                }
+            );
+        },
 
         // ---------------------------------------------------
         // Suche
