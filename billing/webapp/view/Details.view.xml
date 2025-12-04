@@ -142,7 +142,8 @@
                                     text="Edit"
                                     type="Emphasized"
                                     class="sapUiTinyMarginTop"
-                                    width="3rem"/>
+                                    width="3rem"
+                                    press=".onEditTemplate"/>
                             </VBox>
 
                         </VBox>
