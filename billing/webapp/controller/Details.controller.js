@@ -1,20 +1,69 @@
 sap.ui.define([
     "sap/ui/core/mvc/Controller",
     "sap/ui/core/UIComponent",
-    "sap/ui/unified/FileUploader"
-], (Controller, UIComponent, FileUploader) => {
+    "sap/ui/unified/FileUploader",
+    "sap/ui/core/Fragment",
+    "sap/ui/model/json/JSONModel"
+], (Controller, UIComponent, FileUploader, Fragment, JSONModel) => {
     "use strict";
 
     return Controller.extend("billing.controller.Details", {
         onInit() {
-            var oUploadModel = new sap.ui.model.json.JSONModel({
-                invoiceFiles: [],      // ein Eintrag für Rechnung
-                attachments: []        // mehrere für Anhänge
+            // Upload-Model
+            var oUploadModel = new JSONModel({
+                invoiceFiles: [],
+                attachments: []
             });
             this.getView().setModel(oUploadModel, "upload");
+
+            // Template-Model für Dialog
+            var oTemplateModel = new JSONModel({
+                subject: "",
+                body: "",
+                languages: [
+                    { key: "de", name: "German",  selected: true  },
+                    { key: "en", name: "English", selected: false },
+                    { key: "fr", name: "French",  selected: false },
+                    { key: "es", name: "Spanish", selected: false }
+                ]
+            });
+            this.getView().setModel(oTemplateModel, "template");
+
             const oRouter = UIComponent.getRouterFor(this);
             oRouter.getRoute("DetailsRoute").attachPatternMatched(this._onRouteMatched, this);
-},
+        },
+  //---------------------------------------------------------------------------------------------------Edit Templates----------------------------------------------------------------
+        onEditTemplate: function () {
+            // Dialog lazy laden
+            if (!this._oTemplateDialog) {
+                Fragment.load({
+                    name: "billing.view.MessageTemplateDialog",
+                    controller: this
+                }).then(function (oDialog) {
+                    this._oTemplateDialog = oDialog;
+                    this.getView().addDependent(oDialog);
+                    oDialog.open();
+                }.bind(this));
+            } else {
+                this._oTemplateDialog.open();
+            }
+        },
+
+        onTemplateDialogCancel: function () {
+            if (this._oTemplateDialog) {
+                this._oTemplateDialog.close();
+            }
+        },
+
+        onTemplateDialogSave: function () {
+            // Hier später: Template speichern / Backend-Call etc.
+            // Aktuell schließen wir nur den Dialog.
+            if (this._oTemplateDialog) {
+                this._oTemplateDialog.close();
+            }
+        },
+
+
       _onRouteMatched: function (oEvent) {
           const sInvoiceId = oEvent.getParameter("arguments").invoiceId;
 
