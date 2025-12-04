@@ -43,7 +43,7 @@
                 alternateRowColors="true"
                 sticky="ColumnHeaders"
                 mode="MultiSelect"
-                items="{testData>/value}"
+                items="{backend>/value}"
                 itemPress=".onInvoicePress"
                 selectionChange=".onSelectionChange">
 
@@ -74,86 +74,86 @@
                             <ObjectStatus
                                 text=""
                                 icon="{
-                                    path: 'testData>State',
+                                    path: 'backend>State',
                                     formatter: '.formatStatusIcon'
                                 }"
                                 state="{
-                                    path: 'testData>State',
+                                    path: 'backend>State',
                                     formatter: '.formatStatusState'
                                 }"
                             />
 
                             <!-- Recipient Name -->
-                            <Text text="{testData>MetaData/Object/Data/Basics/Recipient/Name}" />
+                            <Text text="{backend>MetaData/Object/Data/Basics/Recipient/Name}" />
 
                             <!-- Recipient Email -->
-                            <Text text="{testData>MetaData/Object/Data/Basics/Recipient/Email/0/Address}" />
+                            <Text text="{backend>MetaData/Object/Data/Basics/Recipient/Email/0/Address}" />
 
                             <!-- Invoice Type -->
                             <Text text="{
-                                path: 'testData>MetaData/Object/Data/Type',
+                                path: 'backend>MetaData/Object/Data/Type',
                                 formatter: '.formatter.formatInvoiceType'
                             }" />
 
                             <!-- Invoice No. -->
-                            <Text text="{testData>MetaData/Object/Data/Basics/Number/Value}" />
+                            <Text text="{backend>MetaData/Object/Data/Basics/Number/Value}" />
 
                             <!-- Netto -->
                             <ObjectNumber
                                 number="{
-                                    path: 'testData>MetaData/Object/Data/Amounts/Net/Value',
+                                    path: 'backend>MetaData/Object/Data/Amounts/Net/Value',
                                     formatter: '.formatter.formatCurrencyValue'
                                 }" />
 
                             <!-- Brutto -->
                             <ObjectNumber
                                 number="{
-                                    path: 'testData>MetaData/Object/Data/Amounts/Gross/Value',
+                                    path: 'backend>MetaData/Object/Data/Amounts/Gross/Value',
                                     formatter: '.formatter.formatCurrencyValue'
                                 }" />
 
                             <!-- CCY -->
                             <Text text="{
-                                path: 'testData>MetaData/Object/Data/Amounts/Currency/Value',
+                                path: 'backend>MetaData/Object/Data/Amounts/Currency/Value',
                                 formatter: '.formatter.formatCurrency'
                             }" />
 
                             <!-- Sales Org -->
-                            <Text text="{testData>MetaData/Object/Data/BusinessPartners/0/SalesOrganisation/Value}" />
+                            <Text text="{backend>MetaData/Object/Data/BusinessPartners/0/SalesOrganisation/Value}" />
 
                             <!-- Factura Date -->
                             <Text text="{
-                                path: 'testData>MetaData/Object/Data/Basics/Date/Value/$date',
+                                path: 'backend>MetaData/Object/Data/Basics/Date/Value/$date',
                                 formatter: '.formatter.formatDate'
                             }" />
 
                             <!-- Creation Date -->
                             <Text text="{
-                                path: 'testData>History/Created/Date/$date',
+                                path: 'backend>History/Created/Date/$date',
                                 formatter: '.formatter.formatDate'
                             }" />
 
                             <!-- Dispatch Date -->
                             <Text text="{
-                                path: 'testData>MetaData/Object/Data/Basics/SendDate/$date',
+                                path: 'backend>MetaData/Object/Data/Basics/SendDate/$date',
                                 formatter: '.formatter.formatDate'
                             }" />
 
                             <!-- Transfer Format -->
-                            <Text text="{testData>MetaData/Object/Data/Basics/TransferFormat}" />
+                            <Text text="{backend>MetaData/Object/Data/Basics/TransferFormat}" />
 
                             <!-- Delivery Method -->
                             <Text text="{
-                                path: 'testData>MetaData/Object/Data/Basics/DeliveryMethod',
+                                path: 'backend>MetaData/Object/Data/Basics/DeliveryMethod',
                                 formatter: '.formatter.formatDeliveryMethod'
                             }" />
 
                             <!-- Delivery ID -->
-                            <Text text="{testData>MetaData/Object/Data/BusinessPartners/1/LeitwegId/Value}" />
+                            <Text text="{backend>MetaData/Object/Data/BusinessPartners/1/LeitwegId/Value}" />
 
                             <!-- PDF -->
                             <Text text="{
-                                path: 'testData>MetaData/Object/Data/Basics/TransferFormat',
+                                path: 'backend>MetaData/Object/Data/Basics/TransferFormat',
                                 formatter: '.formatter.formatPdf'
                             }" />
 

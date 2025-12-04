@@ -25,7 +25,7 @@ sap.ui.define([
 
     _loadBackendData: async function () {
     const loginUrl = "https://test.app.clarc.com/application/api/v1/iam/login";
-    const dataUrl  = "https://test.app.clarc.com/application/api/v1/documenthub/document?$filter=Process/Manager/Type eq 'ccPM_Billing'";
+    const dataUrl  = "https://test.app.clarc.com/application/api/v1/documenthub/document?$select=Id,History,Rights,State,MetaData.Object.Data.Basics.Recipient.Name,MetaData.Object.Data.Basics.Recipient.Email,MetaData.Object.Data.Basics.Number.Value,MetaData.Object.Data.Type,MetaData.Object.Data.SubType,MetaData.Object.Data.Amounts.Net.Value,MetaData.Object.Data.Amounts.Gross.Value,MetaData.Object.Data.Amounts.Currency.Value,MetaData.Object.Data.BusinessPartners,History.Created.Date,MetaData.Object.Data.Basics.Date.Value,MetaData.Object.Data.Basics.SendDate,MetaData.Object.Data.Basics.TransferFormat,MetaData.Object.Data.Basics.DeliveryMethod,MetaData.Object.Data.BusinessPartners,MetaData.Blobs,MetaData&$filter=(Process/Manager/Type%20eq%20%27ccPM_Billing%27)&$top=40&$orderby=CreationDate%20desc";
 
 
       // TODO: Diese Werte durch eure echten dev-Zugangsdaten ersetzen
@@ -67,17 +67,14 @@ sap.ui.define([
 
         // Falls ihr aus dem Login-Response einen Token braucht, hier auslesen:
         const loginData = await loginResp.json();
-        // Beispiel – bitte an eure echte Struktur anpassen:
-        // const sToken = loginData.Token && loginData.Token.Data;
 
         // 2) Daten holen – entweder über Session-Cookie oder (optional) Token
         const response = await fetch(dataUrl, {
           method: "GET",
-          credentials: "include" // sendet das gleiche Cookie wie beim Login mit
-          // Falls ihr doch einen Token-Header braucht, dann z.B.:
-          // headers: {
-          //   "Authorization": "Bearer " + sToken
-          // },
+          credentials: "include",
+          headers: {
+            "Authorization": loginData.Session.TokenType + " " + loginData.Session.Token 
+          },
         });
 
         if (!response.ok) {

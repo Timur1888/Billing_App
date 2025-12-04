@@ -6,8 +6,29 @@ sap.ui.define([
     "sap/ui/model/FilterOperator",
     "billing/model/formatter",
     "billing/util/FilterHelper",
-    "sap/m/MessageBox"
-], function (Controller, UIComponent, JSONModel, Filter, FilterOperator, formatter, FilterHelper, MessageBox) {
+    "sap/m/MessageBox",
+    "sap/m/List",
+    "sap/m/CustomListItem",
+    "sap/m/HBox",
+    "sap/m/CheckBox",
+    "sap/m/Popover",
+    "sap/m/PlacementType"
+], function (
+    Controller,
+    UIComponent,
+    JSONModel,
+    Filter,
+    FilterOperator,
+    formatter,
+    FilterHelper,
+    MessageBox,
+    List,
+    CustomListItem,
+    HBox,
+    CheckBox,
+    Popover,
+    PlacementType
+) {
     "use strict";
 
     return Controller.extend("billing.controller.View1", {
@@ -15,26 +36,29 @@ sap.ui.define([
         formatter: formatter,
 
         onInit: function () {
-            var oModel = this.getOwnerComponent().getModel("testData");
-            console.log("testData:", oModel && oModel.getData());
+            // *** jetzt Backend-Model ***
+            var oModel = this.getOwnerComponent().getModel("backend");
+            console.log("backend model:", oModel && oModel.getData());
 
-            this._oTestDataModel = oModel;
+            this._oBackendModel = oModel;
 
-            // falls Daten schon da sind (z.B. lokales JSON)
+            // falls Daten schon da sind
             this._backupOriginalData();
 
-            // falls Model asynchron lädt (URL), nach dem Laden nochmal sichern
-            if (oModel && oModel.attachRequestCompleted) {
-                oModel.attachRequestCompleted(this._backupOriginalData, this);
+            // falls Daten asynchron per fetch gesetzt werden:
+            if (oModel && oModel.attachEventOnce) {
+                // setData() auf JSONModel feuert ein "change"-Event
+                oModel.attachEventOnce("change", this._backupOriginalData, this);
             }
         },
 
         onCreate: function () {},
+
         // ---------------------------------------------------
         // Refreschen
         // ---------------------------------------------------
         onReload: function () {
-            var oModel = this.getOwnerComponent().getModel("testData");
+            var oModel = this.getOwnerComponent().getModel("backend");
             var oTable = this.byId("tblBilling");
 
             if (!oModel || !this._aOriginalData) {
@@ -55,7 +79,6 @@ sap.ui.define([
                 oDeleteButton.setEnabled(false);
             }
 
-            // Filter-Tokenizer leeren, falls du willst
             var oTokenizer = this.byId("filterTokenizer");
             if (oTokenizer) {
                 oTokenizer.removeAllTokens();
@@ -64,15 +87,15 @@ sap.ui.define([
         },
 
         _backupOriginalData: function () {
-            var oModel = this._oTestDataModel || this.getOwnerComponent().getModel("testData");
+            var oModel = this._oBackendModel || this.getOwnerComponent().getModel("backend");
             if (!oModel) { return; }
 
             var aData = oModel.getProperty("/value");
             if (aData) {
-                // tiefe Kopie, damit wir später wieder saubere Daten haben
                 this._aOriginalData = JSON.parse(JSON.stringify(aData));
             }
         },
+
         // ---------------------------------------------------
         // Löschen
         // ---------------------------------------------------
@@ -83,6 +106,7 @@ sap.ui.define([
 
             oDeleteButton.setEnabled(aSelected.length > 0);
         },
+
         onDelete: function () {
             const oTable         = this.byId("tblBilling");
             const aSelectedItems = oTable.getSelectedItems();
@@ -99,31 +123,26 @@ sap.ui.define([
                     emphasizedAction: MessageBox.Action.DELETE,
                     onClose: function (sAction) {
                         if (sAction !== MessageBox.Action.DELETE) {
-                            return; // Cancel -> nichts tun
+                            return;
                         }
 
-                        // Model-Daten holen
-                        const oModel = this.getOwnerComponent().getModel("testData");
+                        const oModel = this.getOwnerComponent().getModel("backend");
                         const aData  = oModel.getProperty("/value") || [];
 
-                        // Indizes der ausgewählten Einträge bestimmen
                         const aIndices = aSelectedItems.map(function (oItem) {
-                            const oCtx  = oItem.getBindingContext("testData");
+                            const oCtx  = oItem.getBindingContext("backend");
                             const sPath = oCtx.getPath();   // z.B. "/value/3"
                             return parseInt(sPath.split("/").pop(), 10);
                         });
 
-                        // Von hinten nach vorne löschen, damit Indizes nicht verrutschen
                         aIndices
                             .sort(function (a, b) { return b - a; })
                             .forEach(function (iIndex) {
                                 aData.splice(iIndex, 1);
                             });
 
-                        // Model aktualisieren
                         oModel.setProperty("/value", aData);
 
-                        // Auswahl & Button zurücksetzen
                         oTable.removeSelections(true);
                         this.byId("btnDelete").setEnabled(false);
                     }.bind(this)
@@ -171,7 +190,9 @@ sap.ui.define([
                 and: false
             });
 
-            const aData = this.getOwnerComponent().getModel("testData").getProperty("/value") || [];
+            const aData = this.getOwnerComponent()
+                .getModel("backend")
+                .getProperty("/value") || [];
 
             const aMatches = aData.filter(item => {
                 const invoice = String(item.MetaData?.Object?.Data?.Basics?.Number?.Value || "").toLowerCase();
@@ -197,10 +218,10 @@ sap.ui.define([
         // ---------------------------------------------------
         onInvoicePress: function (oEvent) {
             const oItem = oEvent.getParameter("listItem");
-            const oCtx = oItem.getBindingContext("testData");
+            const oCtx  = oItem.getBindingContext("backend");
 
             if (!oCtx) {
-                console.error("Kein BindingContext für Model 'testData' gefunden");
+                console.error("Kein BindingContext für Model 'backend' gefunden");
                 return;
             }
 
@@ -216,7 +237,7 @@ sap.ui.define([
         },
 
         // ---------------------------------------------------
-        // Filter-Button & Dialog (delegiert an FilterHelper)
+        // Filter-Button & Dialog
         // ---------------------------------------------------
         onFilter: function (oEvent) {
             const oPopover = FilterHelper.createFilterPopover(this);
@@ -260,17 +281,17 @@ sap.ui.define([
                 return this._oColumnPopover;
             }
 
-            const oTable = this.byId("tblBilling");
+            const oTable   = this.byId("tblBilling");
             const aColumns = oTable.getColumns();
 
-            const oList = new sap.m.List({
+            const oList = new List({
                 items: aColumns.map(col => {
                     const sColLabel = col.getHeader().getText();
 
-                    return new sap.m.CustomListItem({
-                        content: new sap.m.HBox({
+                    return new CustomListItem({
+                        content: new HBox({
                             items: [
-                                new sap.m.CheckBox({
+                                new CheckBox({
                                     selected: col.getVisible(),
                                     text: sColLabel,
                                     select: function (oEvent) {
@@ -284,8 +305,8 @@ sap.ui.define([
                 })
             });
 
-            this._oColumnPopover = new sap.m.Popover({
-                placement: sap.m.PlacementType.Bottom,
+            this._oColumnPopover = new Popover({
+                placement: PlacementType.Bottom,
                 title: "Columns",
                 contentWidth: "250px",
                 content: oList
@@ -302,7 +323,7 @@ sap.ui.define([
         },
 
         // ---------------------------------------------------
-        // Status-Formatter (im Controller gelassen, sind klein)
+        // Status-Formatter
         // ---------------------------------------------------
         formatStatusIcon: function (sState) {
             switch (sState) {
