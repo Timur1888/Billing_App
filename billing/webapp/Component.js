@@ -12,47 +12,81 @@ sap.ui.define([
     init: function () {
       UIComponent.prototype.init.apply(this, arguments);
 
-      // Backend-Model anlegen (erst mal leer)
-      //      const oBackendModel = new JSONModel();
-      //      this.setModel(oBackendModel, "backend");
+      // Backend-Model anlegen (damit Views darauf binden können)
+      const oBackendModel = new JSONModel();
+      this.setModel(oBackendModel, "backend");
 
-      // Routing direkt starten
+      // Routing starten
       this.getRouter().initialize();
 
-      // Daten im Hintergrund laden (kein await)
+      // Daten im Hintergrund laden
       this._loadBackendData();
     },
 
     _loadBackendData: async function () {
-      const tokenUrl = "https://test.app.clarc.com/application/api/v1/iam/oauth/token";
-      const clientId = localCredentials.clientId;
-      const clientSecret = localCredentials.clientSecret;
-      //https://test.app.clarc.com:443/application/api/v1/documenthub/document?$filter=Process/Manager/Type eq 'ccPM_Billing'
-      //https://test.app.clarc.com/application/api/v1/documenthub/document?$select=Id,History,Rights,State,MetaData.Object.Data.Basics.Recipient.Name,MetaData.Object.Data.Basics.Recipient.Email,MetaData.Object.Data.Basics.Number.Value,MetaData.Object.Data.Type,MetaData.Object.Data.SubType,MetaData.Object.Data.Amounts.Net.Value,MetaData.Object.Data.Amounts.Gross.Value,MetaData.Object.Data.Amounts.Currency.Value,MetaData.Object.Data.BusinessPartners,History.Created.Date,MetaData.Object.Data.Basics.Date.Value,MetaData.Object.Data.Basics.SendDate,MetaData.Object.Data.Basics.TransferFormat,MetaData.Object.Data.Basics.DeliveryMethod,MetaData.Object.Data.BusinessPartners,MetaData.Blobs,MetaData&$filter=(Process/Manager/Type%20eq%20%27ccPM_Billing%27)&$top=40&$orderby=CreationDate%20desc
-      const dataUrl = "https://test.app.clarc.com:443/application/api/v1/documenthub/$metadata";
+    const loginUrl = "https://test.app.clarc.com/application/api/v1/iam/login";
+    const dataUrl  = "https://test.app.clarc.com/application/api/v1/documenthub/document?$filter=Process/Manager/Type eq 'ccPM_Billing'";
+
+
+      // TODO: Diese Werte durch eure echten dev-Zugangsdaten ersetzen
+      const oPayload = {
+        Credentials: {
+          Username:   "Willi",
+          Password:   "Ecmdemo2025!",
+          Tenant:     "acme",
+          SystemClass:"ccSC_Development",
+          Language:   "DE",
+          FingerPrint:"none",
+          Code:       "",
+          Token: {
+            Data: "",
+            Type: "ccVT_Unknown"
+          },
+          RequiredRoles: [],
+          ClientId:      "",
+          ClientSecret:  ""
+        }
+      };
 
       try {
-        const url = `${tokenUrl}?grant_type=client_credentials&client_id=${clientId}&client_secret=${clientSecret}`;
-        const tokenResp = await fetch(url);
-        if (!tokenResp.ok) {
-          console.error("Token-Fehler:", tokenResp.status);
+        // 1) Login-Request
+        const loginResp = await fetch(loginUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          // ganz wichtig, damit evtl. gesetzte Cookies für den nächsten Call mitgeschickt werden
+          credentials: "include",
+          body: JSON.stringify(oPayload)
+        });
+
+        if (!loginResp.ok) {
+          console.error("Login-Fehler:", loginResp.status, loginResp.statusText);
           return;
         }
-        const tokenData = await tokenResp.json();
-        const accessToken = tokenData.access_token;
 
+        // Falls ihr aus dem Login-Response einen Token braucht, hier auslesen:
+        const loginData = await loginResp.json();
+        // Beispiel – bitte an eure echte Struktur anpassen:
+        // const sToken = loginData.Token && loginData.Token.Data;
+
+        // 2) Daten holen – entweder über Session-Cookie oder (optional) Token
         const response = await fetch(dataUrl, {
           method: "GET",
-          headers: { "Authorization": "Bearer " + accessToken }
+          credentials: "include" // sendet das gleiche Cookie wie beim Login mit
+          // Falls ihr doch einen Token-Header braucht, dann z.B.:
+          // headers: {
+          //   "Authorization": "Bearer " + sToken
+          // },
         });
 
         if (!response.ok) {
-          console.error("Backend Request Error:", response.status);
+          console.error("Backend Request Error:", response.status, response.statusText);
           return;
         }
 
         const json = await response.json();
-        this.getModel("backend").setData(json); // Views aktualisieren sich automatisch
+        this.getModel("backend").setData(json);
       } catch (e) {
         console.error("Fehler beim Laden:", e);
       }

@@ -60,6 +60,9 @@
     "testData": {
       "type": "sap.ui.model.json.JSONModel",
       "uri": "model/testData.json"
+    },
+    "backend": {
+      "type": "sap.ui.model.json.JSONModel"
     }
     },
     "resources": {
