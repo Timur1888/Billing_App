@@ -13,8 +13,8 @@ sap.ui.define([
       UIComponent.prototype.init.apply(this, arguments);
 
       // Backend-Model anlegen (erst mal leer)
-//      const oBackendModel = new JSONModel();
-//      this.setModel(oBackendModel, "backend");
+      //      const oBackendModel = new JSONModel();
+      //      this.setModel(oBackendModel, "backend");
 
       // Routing direkt starten
       this.getRouter().initialize();
