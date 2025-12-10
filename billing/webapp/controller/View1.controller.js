@@ -41,15 +41,6 @@ sap.ui.define([
             console.log("backend model:", oModel && oModel.getData());
 
             this._oBackendModel = oModel;
-
-            // falls Daten schon da sind
-            this._backupOriginalData();
-
-            // falls Daten asynchron per fetch gesetzt werden:
-            if (oModel && oModel.attachEventOnce) {
-                // setData() auf JSONModel feuert ein "change"-Event
-                oModel.attachEventOnce("change", this._backupOriginalData, this);
-            }
         },
 
         onCreate: function () {},
@@ -57,42 +48,37 @@ sap.ui.define([
         // ---------------------------------------------------
         // Refreschen
         // ---------------------------------------------------
-        onReload: function () {
-            var oModel = this.getOwnerComponent().getModel("backend");
-            var oTable = this.byId("tblBilling");
+        onReload: async function () {
+            const oComponent = this.getOwnerComponent();
+            const oTable     = this.byId("tblBilling");
 
-            if (!oModel || !this._aOriginalData) {
-                console.warn("Keine Originaldaten für Refresh vorhanden");
-                return;
+            // optional: Busy-Indicator für Tabelle
+            if (oTable) {
+                oTable.setBusy(true);
             }
 
-            // Originaldaten wiederherstellen (deep copy)
-            var aClone = JSON.parse(JSON.stringify(this._aOriginalData));
-            oModel.setProperty("/value", aClone);
+            try {
+                // neu vom Backend laden
+                await oComponent.reloadBackendData();
+            } catch (e) {
+                console.error("Fehler beim Reload:", e);
+            }
 
             // UI-Zustand zurücksetzen
             if (oTable) {
                 oTable.removeSelections(true);
+                oTable.setBusy(false);
             }
-            var oDeleteButton = this.byId("btnDelete");
+
+            const oDeleteButton = this.byId("btnDelete");
             if (oDeleteButton) {
                 oDeleteButton.setEnabled(false);
             }
 
-            var oTokenizer = this.byId("filterTokenizer");
+            const oTokenizer = this.byId("filterTokenizer");
             if (oTokenizer) {
                 oTokenizer.removeAllTokens();
                 oTokenizer.setVisible(false);
-            }
-        },
-
-        _backupOriginalData: function () {
-            var oModel = this._oBackendModel || this.getOwnerComponent().getModel("backend");
-            if (!oModel) { return; }
-
-            var aData = oModel.getProperty("/value");
-            if (aData) {
-                this._aOriginalData = JSON.parse(JSON.stringify(aData));
             }
         },
 

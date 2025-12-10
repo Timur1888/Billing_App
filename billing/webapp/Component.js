@@ -23,6 +23,11 @@ sap.ui.define([
       this._loadBackendData();
     },
 
+    // öffentliche Methode für Controller
+    reloadBackendData: function () {
+      return this._loadBackendData();
+    },
+
     _loadBackendData: async function () {
     const loginUrl = "https://test.app.clarc.com/application/api/v1/iam/login";
     const dataUrl  = "https://test.app.clarc.com/application/api/v1/documenthub/document?$select=Id,History,Rights,State,MetaData.Object.Data.Basics.Recipient.Name,MetaData.Object.Data.Basics.Recipient.Email,MetaData.Object.Data.Basics.Number.Value,MetaData.Object.Data.Type,MetaData.Object.Data.SubType,MetaData.Object.Data.Amounts.Net.Value,MetaData.Object.Data.Amounts.Gross.Value,MetaData.Object.Data.Amounts.Currency.Value,MetaData.Object.Data.BusinessPartners,History.Created.Date,MetaData.Object.Data.Basics.Date.Value,MetaData.Object.Data.Basics.SendDate,MetaData.Object.Data.Basics.TransferFormat,MetaData.Object.Data.Basics.DeliveryMethod,MetaData.Object.Data.BusinessPartners,MetaData.Blobs,MetaData&$filter=(Process/Manager/Type%20eq%20%27ccPM_Billing%27)&$top=40&$orderby=CreationDate%20desc";
