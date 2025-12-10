@@ -42,27 +42,26 @@ sap.ui.define([
 
             this._oBackendModel = oModel;
 
-            const oVariantModel = new sap.ui.model.json.JSONModel({
+        const oVariantModel = new sap.ui.model.json.JSONModel({
             currentViewId: "STANDARD",
-            views: [
-                {
-                    id: "STANDARD",
-                    name: "Standard",
-                    isDefault: true,
-                    isPublic: false,
-                    autoApply: false,
-                    state: {}          // hier später Filter/Sortierung etc.
-                }
-            ],
-            newView: {
-                name: "",
-                isDefault: false,
-                isPublic: false,
-                autoApply: false
-            }
-    });
+            currentViewName: "Standard",
+            views: []   // füllen wir gleich
+        });
+        this.getView().setModel(oVariantModel, "variant");
 
-    this.getView().setModel(oVariantModel, "variant");
+        // ➜ aktuellen Zustand (keine Filter, alle Spalten wie im XML) als Standard-State speichern
+        const oDefaultState = this._getCurrentState();
+
+        oVariantModel.setProperty("/views/0", {
+            id: "STANDARD",
+            name: "Standard",
+            isDefault: true,
+            isPublic: false,
+            autoApply: false,
+            state: oDefaultState          // HIER: eigener State für Standard
+        });
+
+        this.getView().setModel(oVariantModel, "variant");
         },
 
         onCreate: function () {},
@@ -364,46 +363,62 @@ sap.ui.define([
 
         _applyState: function (oState) {
             const oTokenizer = this.byId("filterTokenizer");
+            const oTable     = this.byId("tblBilling");
 
-            if (!oTokenizer) {
-                return;
-            }
+            // -------- Tokens / Filter ----------
+            if (oTokenizer) {
+                oTokenizer.removeAllTokens();
 
-            // alle alten Tokens weg
-            oTokenizer.removeAllTokens();
+                if (oState && Array.isArray(oState.tokens)) {
+                    oState.tokens.forEach(function (oTokState) {
+                        const sType  = oTokState.filterType;
+                        const oToken = new sap.m.Token({
+                            text: oTokState.text,
+                            key:  sType,
+                            editable: true
+                        });
 
-            if (!oState || !Array.isArray(oState.tokens)) {
-                // sicherheitshalber Filter zurücksetzen
+                        oToken.data("filterType", sType);
+
+                        if (sType === "INVOICE_NO") {
+                            oToken.data("value", oTokState.value);
+                        }
+
+                        if (sType === "CREATION_DATE") {
+                            oToken.data("from", oTokState.from);
+                            oToken.data("to",   oTokState.to);
+                        }
+
+                        oTokenizer.addToken(oToken);
+                    });
+                }
+
+                // deine bestehende Filterlogik wiederverwenden
                 FilterHelper.applyFiltersFromTokens(this);
-                return;
             }
 
-            oState.tokens.forEach(function (oTokState) {
-                const sType = oTokState.filterType;
-                const oToken = new sap.m.Token({
-                    text: oTokState.text,
-                    key:  sType,
-                    editable: true
+            // -------- Spalten-Sichtbarkeit ----------
+            if (oTable && oState && Array.isArray(oState.columns)) {
+                const aCols = oTable.getColumns();
+
+                oState.columns.forEach(function (oColState) {
+                    const oCol = aCols.find(function (c) {
+                        return c.getId() === oColState.id;
+                    });
+
+                    if (oCol) {
+                        oCol.setVisible(!!oColState.visible);
+                    }
                 });
+            }
 
-                oToken.data("filterType", sType);
+            // Column-Settings-Popover neu aufbauen, damit die Checkboxen passen
+            if (this._oColumnPopover) {
+                this._oColumnPopover.destroy();
+                this._oColumnPopover = null;
+            }
 
-                if (sType === "INVOICE_NO") {
-                    oToken.data("value", oTokState.value);
-                }
-
-                if (sType === "CREATION_DATE") {
-                    oToken.data("from", oTokState.from); // Date-Objekte
-                    oToken.data("to",   oTokState.to);
-                }
-
-                oTokenizer.addToken(oToken);
-            });
-
-            // deine bestehende Filterlogik wiederverwenden
-            FilterHelper.applyFiltersFromTokens(this);
-
-            // TODO: sorters aus oState.sorters anwenden, sobald du Sortierung hast
+            // sorters aus oState.sorters kommen später dazu
         },
 
 
@@ -478,15 +493,10 @@ sap.ui.define([
 
         _getCurrentState: function () {
             const oTokenizer = this.byId("filterTokenizer");
+            const oTable     = this.byId("tblBilling");
 
-            if (!oTokenizer) {
-                return {
-                    tokens: [],
-                    sorters: [] // später, wenn du Sortierung einbaust
-                };
-            }
-
-            const aTokens = oTokenizer.getTokens().map(function (oToken) {
+            // --- Tokens (Filter) sichern ---
+            const aTokensState = oTokenizer ? oTokenizer.getTokens().map(function (oToken) {
                 const sType = oToken.data("filterType");
 
                 const oEntry = {
@@ -494,25 +504,34 @@ sap.ui.define([
                     text: oToken.getText()
                 };
 
-                // Invoice No.
                 if (sType === "INVOICE_NO") {
                     oEntry.value = oToken.data("value");
                 }
 
-                // Creation Date
                 if (sType === "CREATION_DATE") {
-                    oEntry.from = oToken.data("from"); // Date-Objekt
-                    oEntry.to   = oToken.data("to");   // Date-Objekt
+                    oEntry.from = oToken.data("from");
+                    oEntry.to   = oToken.data("to");
                 }
 
                 return oEntry;
-            });
+            }) : [];
+
+            // --- Spalten-Sichtbarkeit sichern ---
+            let aColumnsState = [];
+            if (oTable) {
+                aColumnsState = oTable.getColumns().map(function (oCol) {
+                    return {
+                        id: oCol.getId(),          // eindeutige ID der Spalte
+                        visible: oCol.getVisible() // true/false
+                    };
+                });
+            }
 
             return {
-                tokens: aTokens,
-                sorters: [] // noch leer, Sortierung kommt später
+                tokens:  aTokensState,
+                sorters: [],          // später für Sortierung
+                columns: aColumnsState
             };
         },
-
     });
 });
