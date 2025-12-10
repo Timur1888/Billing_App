@@ -308,30 +308,5 @@ sap.ui.define([
             oPopover.openBy(oEvent.getSource());
         },
 
-        // ---------------------------------------------------
-        // Status-Formatter
-        // ---------------------------------------------------
-        formatStatusIcon: function (sState) {
-            switch (sState) {
-                case "ccDS_Finished":
-                    return "sap-icon://paper-plane";
-                case "ccDS_UserAction":
-                    return "sap-icon://action";
-                default:
-                    return "sap-icon://question-mark";
-            }
-        },
-
-        formatStatusState: function (sState) {
-            switch (sState) {
-                case "ccDS_Finished":
-                    return sap.ui.core.ValueState.Success;
-                case "ccDS_UserAction":
-                    return sap.ui.core.ValueState.Warning;
-                default:
-                    return sap.ui.core.ValueState.None;
-            }
-        }
-
     });
 });

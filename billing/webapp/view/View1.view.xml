@@ -75,11 +75,11 @@
                                 text=""
                                 icon="{
                                     path: 'backend>State',
-                                    formatter: '.formatStatusIcon'
+                                    formatter: '.formatter.formatStatusIcon'
                                 }"
                                 state="{
                                     path: 'backend>State',
-                                    formatter: '.formatStatusState'
+                                    formatter: '.formatter.formatStatusState'
                                 }"
                             />
 
