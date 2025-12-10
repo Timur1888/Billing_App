@@ -41,6 +41,28 @@ sap.ui.define([
             console.log("backend model:", oModel && oModel.getData());
 
             this._oBackendModel = oModel;
+
+            const oVariantModel = new sap.ui.model.json.JSONModel({
+            currentViewId: "STANDARD",
+            views: [
+                {
+                    id: "STANDARD",
+                    name: "Standard",
+                    isDefault: true,
+                    isPublic: false,
+                    autoApply: false,
+                    state: {}          // hier später Filter/Sortierung etc.
+                }
+            ],
+            newView: {
+                name: "",
+                isDefault: false,
+                isPublic: false,
+                autoApply: false
+            }
+    });
+
+    this.getView().setModel(oVariantModel, "variant");
         },
 
         onCreate: function () {},
@@ -306,6 +328,190 @@ sap.ui.define([
         onSettings: function (oEvent) {
             const oPopover = this._createColumnSettingsPopover();
             oPopover.openBy(oEvent.getSource());
+        },
+        // ---------------------------------------------------
+        // Variant (Ansicht) speichern
+        // ---------------------------------------------------
+
+        //Controller für VariantDialog.fragment.xml
+        onOpenVariantDialog: function () {
+            if (!this._oVariantDialog) {
+                this._oVariantDialog = sap.ui.xmlfragment(
+                    "billing.view.VariantDialog",
+                    this
+                );
+                this.getView().addDependent(this._oVariantDialog);
+            }
+            this._oVariantDialog.open();
+        },
+
+        onCloseVariantDialog: function () {
+            this._oVariantDialog.close();
+        },
+        
+        onVariantSelected: function (oEvent) {
+            const oCtx = oEvent.getParameter("listItem").getBindingContext("variant");
+            const sId  = oCtx.getProperty("id");
+            const oView = oCtx.getObject(); // enthält auch state
+
+            const oVariantModel = this.getView().getModel("variant");
+            oVariantModel.setProperty("/currentViewId", sId);
+            oVariantModel.setProperty("/currentViewName", oView.name);
+
+            // hier gespeicherten Zustand anwenden
+            this._applyState(oView.state || {});
+        },
+
+        _applyState: function (oState) {
+            const oTokenizer = this.byId("filterTokenizer");
+
+            if (!oTokenizer) {
+                return;
+            }
+
+            // alle alten Tokens weg
+            oTokenizer.removeAllTokens();
+
+            if (!oState || !Array.isArray(oState.tokens)) {
+                // sicherheitshalber Filter zurücksetzen
+                FilterHelper.applyFiltersFromTokens(this);
+                return;
+            }
+
+            oState.tokens.forEach(function (oTokState) {
+                const sType = oTokState.filterType;
+                const oToken = new sap.m.Token({
+                    text: oTokState.text,
+                    key:  sType,
+                    editable: true
+                });
+
+                oToken.data("filterType", sType);
+
+                if (sType === "INVOICE_NO") {
+                    oToken.data("value", oTokState.value);
+                }
+
+                if (sType === "CREATION_DATE") {
+                    oToken.data("from", oTokState.from); // Date-Objekte
+                    oToken.data("to",   oTokState.to);
+                }
+
+                oTokenizer.addToken(oToken);
+            });
+
+            // deine bestehende Filterlogik wiederverwenden
+            FilterHelper.applyFiltersFromTokens(this);
+
+            // TODO: sorters aus oState.sorters anwenden, sobald du Sortierung hast
+        },
+
+
+
+        //Controller für SaveViewDialog.fragment.xml
+        onSaveViewAs: function () {
+            const oModel = this.getView().getModel("variant");
+
+            // Defaults für neue Ansicht setzen
+            oModel.setProperty("/newView", {
+                name: "",
+                isDefault: false,
+                isPublic: false,
+                autoApply: false
+            });
+
+            if (!this._oSaveViewDialog) {
+                this._oSaveViewDialog = sap.ui.xmlfragment(
+                    "billing.view.SaveViewDialog",
+                    this
+                );
+                this.getView().addDependent(this._oSaveViewDialog);
+            }
+            this._oSaveViewDialog.open();
+        },
+
+        onCancelSaveView: function () {
+            this._oSaveViewDialog.close();
+        },
+
+        onConfirmSaveView: function () {
+            const oModel   = this.getView().getModel("variant");
+            const oData    = oModel.getData();
+            const oNewView = oData.newView;
+
+            if (!oNewView.name) {
+                sap.m.MessageToast.show("Bitte einen Namen eingeben");
+                return;
+            }
+
+            // aktuellen State einsammeln (Filter, Sortierung, etc.)
+            const oState = this._getCurrentState();   // Beispiel-Funktion von oben
+
+            // neue ID (sehr simpel)
+            const sId = "V" + (oData.views.length + 1);
+
+            const oView = {
+                id: sId,
+                name: oNewView.name,
+                isDefault: oNewView.isDefault,
+                isPublic: oNewView.isPublic,
+                autoApply: oNewView.autoApply,
+                state: oState
+            };
+
+            oData.views.push(oView);
+            oData.currentViewId = sId;
+
+            // optional: wenn als Standard, alle anderen Flags zurücksetzen
+            if (oNewView.isDefault) {
+                oData.views.forEach(v => {
+                    v.isDefault = (v.id === sId);
+                });
+            }
+
+            oModel.refresh(true);
+            this._oSaveViewDialog.close();
+            this._oVariantDialog.close();
+
+            sap.m.MessageToast.show("Ansicht gespeichert: " + oView.name);
+        },
+
+        _getCurrentState: function () {
+            const oTokenizer = this.byId("filterTokenizer");
+
+            if (!oTokenizer) {
+                return {
+                    tokens: [],
+                    sorters: [] // später, wenn du Sortierung einbaust
+                };
+            }
+
+            const aTokens = oTokenizer.getTokens().map(function (oToken) {
+                const sType = oToken.data("filterType");
+
+                const oEntry = {
+                    filterType: sType,
+                    text: oToken.getText()
+                };
+
+                // Invoice No.
+                if (sType === "INVOICE_NO") {
+                    oEntry.value = oToken.data("value");
+                }
+
+                // Creation Date
+                if (sType === "CREATION_DATE") {
+                    oEntry.from = oToken.data("from"); // Date-Objekt
+                    oEntry.to   = oToken.data("to");   // Date-Objekt
+                }
+
+                return oEntry;
+            });
+
+            return {
+                tokens: aTokens,
+                sorters: [] // noch leer, Sortierung kommt später
+            };
         },
 
     });

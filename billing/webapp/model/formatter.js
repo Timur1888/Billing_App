@@ -57,7 +57,7 @@ sap.ui.define([
             return oFormatter.format(vNumber, "EUR");
         },
 
-                // ---------------------------------------------------
+        // ---------------------------------------------------
         // Status-Formatter
         // ---------------------------------------------------
         formatStatusIcon: function (sState) {

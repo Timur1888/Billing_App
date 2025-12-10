@@ -1,0 +1,35 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core">
+    <Dialog
+        id="dlgVariants"
+        title="Meine Ansichten"
+        horizontalScrolling="false"
+        verticalScrolling="true">
+        <VBox class="sapUiSmallMargin">
+            <List
+                id="lstVariants"
+                mode="SingleSelectMaster"
+                items="{
+                    path: 'variant>/views'
+                }"
+                selectionChange=".onVariantSelected">
+                <StandardListItem
+                    title="{variant>name}"
+                    selected="{
+                        = ${variant>id} === ${variant>/currentViewId}
+                    }" />
+            </List>
+        </VBox>
+        <beginButton>
+            <Button
+                text="Sichern als"
+                press=".onSaveViewAs" />
+        </beginButton>
+        <endButton>
+            <Button
+                text="Schließen"
+                press=".onCloseVariantDialog" />
+        </endButton>
+    </Dialog>
+</core:FragmentDefinition>
