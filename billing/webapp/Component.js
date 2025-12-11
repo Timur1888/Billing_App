@@ -36,16 +36,16 @@ sap.ui.define([
       // TODO: Diese Werte durch eure echten dev-Zugangsdaten ersetzen
       const oPayload = {
         Credentials: {
-          Username:   "Willi",
-          Password:   "Ecmdemo2025!",
-          Tenant:     "acme",
-          SystemClass:"ccSC_Development",
-          Language:   "DE",
-          FingerPrint:"none",
+          Username:   "",
+          Password:   "",
+          Tenant:     "",
+          SystemClass:"",
+          Language:   "",
+          FingerPrint:"",
           Code:       "",
           Token: {
             Data: "",
-            Type: "ccVT_Unknown"
+            Type: ""
           },
           RequiredRoles: [],
           ClientId:      "",
