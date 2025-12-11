@@ -410,7 +410,15 @@ sap.ui.define([
         },
 
         onOpenManageDialog: function () {
-            this._ensureAtLeastOneView();
+            // Kopie der aktuellen Varianten erstellen
+            const oVariantModel = this.getView().getModel("variant");
+            const aViews        = oVariantModel.getProperty("/views") || [];
+            const aCopy         = JSON.parse(JSON.stringify(aViews));
+
+            if (!this._oManageModel) {
+                this._oManageModel = new sap.ui.model.json.JSONModel();
+            }
+            this._oManageModel.setData({ views: aCopy });
 
             if (!this._oManageDialog) {
                 this._oManageDialog = sap.ui.xmlfragment(
@@ -419,6 +427,8 @@ sap.ui.define([
                 );
                 this.getView().addDependent(this._oManageDialog);
             }
+
+            this._oManageDialog.setModel(this._oManageModel, "variantManage");
             this._oManageDialog.open();
         },
 
@@ -427,57 +437,47 @@ sap.ui.define([
         },
 
         onVariantDelete: function (oEvent) {
-            const oCtx       = oEvent.getSource().getBindingContext("variant");
-            const sId        = oCtx.getProperty("id");
-            const bIsDefault = oCtx.getProperty("isDefault");
+            const oCtx         = oEvent.getSource().getBindingContext("variantManage");
+            const bIsDefault   = oCtx.getProperty("isDefault");
+            const oManageModel = this._oManageModel;
+            let   aViews       = oManageModel.getProperty("/views") || [];
 
-            // aktuelle Standardansicht darf NIE gelöscht werden
+            // aktuelle Standardansicht darf nicht gelöscht werden
             if (bIsDefault) {
                 sap.m.MessageToast.show("Die Standardansicht kann nicht gelöscht werden.");
                 return;
             }
 
-            const oModel = this.getView().getModel("variant");
-            let   aViews = oModel.getProperty("/views") || [];
-
-            // letzte verbleibende Ansicht darf nicht gelöscht werden
+            // es muss mindestens eine Ansicht übrig bleiben
             if (aViews.length <= 1) {
                 sap.m.MessageToast.show("Es muss mindestens eine Ansicht vorhanden sein.");
                 return;
             }
 
-            // Ansicht entfernen
-            aViews = aViews.filter(v => v.id !== sId);
-            oModel.setProperty("/views", aViews);
+            // Index aus dem Pfad ermitteln (z.B. "/views/3" -> 3)
+            const sPath   = oCtx.getPath();
+            const sIndex  = sPath.split("/").pop();
+            const iIndex  = parseInt(sIndex, 10);
 
-            // Default-Ansicht nach Löschen neu bestimmen
-            let oDefault = aViews.find(v => v.isDefault) || aViews[0];
-            if (!oDefault) {
-                oDefault = aViews[0];
-                oDefault.isDefault = true;
-                oModel.setProperty("/views", aViews);
+            if (!isNaN(iIndex) && iIndex >= 0 && iIndex < aViews.length) {
+                aViews.splice(iIndex, 1);
+                oManageModel.setProperty("/views", aViews);
             }
-
-            oModel.setProperty("/currentViewId",   oDefault.id);
-            oModel.setProperty("/currentViewName", oDefault.name);
-            this._applyState(oDefault.state || {});
-
-            this._ensureAtLeastOneView();
         },
 
         onVariantDefaultToggle: function (oEvent) {
-            const oCtx = oEvent.getSource().getBindingContext("variant");
-            const sId = oCtx.getProperty("id");
-
-            const oModel = this.getView().getModel("variant");
-            const aViews = oModel.getProperty("/views");
+            const oCtx         = oEvent.getSource().getBindingContext("variantManage");
+            const sId          = oCtx.getProperty("id");
+            const oManageModel = this._oManageModel;
+            const aViews       = oManageModel.getProperty("/views") || [];
 
             aViews.forEach(v => {
                 v.isDefault = (v.id === sId);
             });
 
-            oModel.refresh(true);
+            oManageModel.setProperty("/views", aViews);
         },
+
         onCloseVariantDialog: function () {
             this._oVariantDialog.close();
         },
@@ -601,20 +601,36 @@ sap.ui.define([
             const oData    = oModel.getData();
             const oNewView = oData.newView;
 
-            if (!oNewView.name) {
+            // Eingabe trimmen (entfernt Leerzeichen am Anfang/Ende)
+            const sName = (oNewView.name || "").trim();
+
+            // Input-Feld holen
+            const oInput = sap.ui.getCore().byId("inpViewName");
+
+            // Validierung
+            if (!sName || sName.length === 0) {
+                if (oInput) {
+                    oInput.setValueState("Error");
+                    oInput.setValueStateText("Bitte einen Namen eingeben");
+                }
                 sap.m.MessageToast.show("Bitte einen Namen eingeben");
                 return;
             }
 
-            // aktuellen State einsammeln (Filter, Sortierung, etc.)
-            const oState = this._getCurrentState();   // Beispiel-Funktion von oben
+            // Falls vorher ein Fehler angezeigt wurde → zurücksetzen
+            if (oInput) {
+                oInput.setValueState("None");
+            }
 
-            // neue ID (sehr simpel)
+            // aktuellen State einsammeln (Filter, Sortierung, etc.)
+            const oState = this._getCurrentState();
+
+            // neue ID erstellen
             const sId = "V" + (oData.views.length + 1);
 
             const oView = {
                 id: sId,
-                name: oNewView.name,
+                name: sName,
                 isDefault: oNewView.isDefault,
                 isPrivate: oNewView.isPrivate,
                 autoApply: oNewView.autoApply,
@@ -625,7 +641,7 @@ sap.ui.define([
             oData.views.push(oView);
             oData.currentViewId = sId;
 
-            // optional: wenn als Standard, alle anderen Flags zurücksetzen
+            // Falls Standard gesetzt → andere deaktivieren
             if (oNewView.isDefault) {
                 oData.views.forEach(v => {
                     v.isDefault = (v.id === sId);
@@ -633,6 +649,7 @@ sap.ui.define([
             }
 
             oModel.refresh(true);
+
             this._oSaveViewDialog.close();
             this._oVariantDialog.close();
 
@@ -685,34 +702,39 @@ sap.ui.define([
 
 
         onManageSave: function () {
-            const oModel = this.getView().getModel("variant");
-            const aViews = oModel.getProperty("/views") || [];
+            const oVariantModel = this.getView().getModel("variant");
+            const oManageModel  = this._oManageModel;
+
+            const aViews = oManageModel.getProperty("/views") || [];
+
+            if (!aViews.length) {
+                sap.m.MessageToast.show("Es muss mindestens eine Ansicht vorhanden sein.");
+                return;
+            }
 
             // sicherstellen, dass genau eine Default-Ansicht existiert
             let oDefault = aViews.find(v => v.isDefault);
-            if (!oDefault && aViews.length) {
+            if (!oDefault) {
                 oDefault = aViews[0];
                 aViews.forEach(v => v.isDefault = (v === oDefault));
-                oModel.setProperty("/views", aViews);
             }
 
-            this._ensureAtLeastOneView();
+            // Kopie zurück ins Haupt-Model schreiben
+            oVariantModel.setProperty("/views", aViews);
+            oVariantModel.setProperty("/currentViewId",   oDefault.id);
+            oVariantModel.setProperty("/currentViewName", oDefault.name);
 
-            // aktuelle Ansicht auf Default setzen
-            oDefault = aViews.find(v => v.isDefault) || aViews[0];
-            if (oDefault) {
-                oModel.setProperty("/currentViewId",   oDefault.id);
-                oModel.setProperty("/currentViewName", oDefault.name);
-                this._applyState(oDefault.state || {});
-            }
+            this._applyState(oDefault.state || {});
 
             if (this._oManageDialog) {
                 this._oManageDialog.close();
             }
         },
-
         onCloseManageDialog: function () {
-            this._oManageDialog.close();
+            if (this._oManageDialog) {
+                this._oManageDialog.close();
+            }
+            // _oManageModel bleibt bestehen, wird beim nächsten Öffnen neu überschrieben
         },
 
     });

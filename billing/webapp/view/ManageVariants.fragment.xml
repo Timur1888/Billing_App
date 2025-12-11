@@ -19,7 +19,7 @@
             <Table
                 id="tblManageVariants"
                 items="{
-                    path: 'variant>/views'
+                    path: 'variantManage>/views'
                 }">
 
                 <columns>
@@ -40,42 +40,40 @@
                                         src="sap-icon://favorite"
                                         class="sapUiTinyMarginEnd" />
                                     <Input
-                                        value="{variant>name}"
+                                        value="{variantManage>name}"
                                         width="100%" />
                                 </items>
                             </HBox>
 
+                            <Text text="{= ${variantManage>isPublic} ? 'Öffentlich' : 'Privat' }"/>
 
-                            <!-- Freigegeben: Öffentlich / Privat -->
-                            <Text
-                                text="{= ${variant>isPublic} ? 'Öffentlich' : 'Privat' }"/>
-
-                            <!-- Standard: Radiobutton wie im Original -->
                             <RadioButton
                                 groupName="variantDefault"
-                                selected="{variant>isDefault}"
+                                selected="{variantManage>isDefault}"
                                 select=".onVariantDefaultToggle"/>
 
-                            <!-- Automatisch anwenden: Checkbox + Text nur wenn aktiv -->
                             <HBox width="100%">
-                                <CheckBox
-                                    selected="{variant>autoApply}"/>
-                                <Text
-                                    class="sapUiTinyMarginBegin"
-                                    wrapping="true"
-                                    visible="{variant>autoApply}"
-                                    text="Wenn voreingestellte Filterwerte verfügbar sind, lädt der Inhalt automatisch."/>
+                                <items>
+                                    <CheckBox
+                                        selected="{variantManage>autoApply}"/>
+                                    <Text
+                                        class="sapUiTinyMarginBegin"
+                                        wrapping="true"
+                                        visible="{variantManage>autoApply}"
+                                        text="Wenn voreingestellte Filterwerte verfügbar sind, lädt der Inhalt automatisch."/>
+                                </items>
                             </HBox>
 
-                            <!-- Angelegt von + X zum Löschen -->
                             <HBox width="100%" justifyContent="SpaceBetween">
-                                <Text text="{variant>createdBy}"/>
-                                <Button
-                                    icon="sap-icon://decline"
-                                    type="Transparent"
-                                    tooltip="Ansicht löschen"
-                                    visible="{= !${variant>isDefault} }"
-                                    press=".onVariantDelete"/>
+                                <items>
+                                    <Text text="{variantManage>createdBy}"/>
+                                    <Button
+                                        icon="sap-icon://decline"
+                                        type="Transparent"
+                                        tooltip="Ansicht löschen"
+                                        visible="{= !${variantManage>isDefault} }"
+                                        press=".onVariantDelete"/>
+                                </items>
                             </HBox>
 
                         </cells>
