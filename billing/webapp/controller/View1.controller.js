@@ -600,15 +600,13 @@ sap.ui.define([
             const oModel   = this.getView().getModel("variant");
             const oData    = oModel.getData();
             const oNewView = oData.newView;
+            const oInput   = sap.ui.getCore().byId("inpViewName");
 
-            // Eingabe trimmen (entfernt Leerzeichen am Anfang/Ende)
-            const sName = (oNewView.name || "").trim();
+            // ---- Grundvalidierung: nicht leer, nicht nur Spaces ----
+            const MAX_LEN = 36;
+            let sName = (oNewView.name || "").trim();
 
-            // Input-Feld holen
-            const oInput = sap.ui.getCore().byId("inpViewName");
-
-            // Validierung
-            if (!sName || sName.length === 0) {
+            if (!sName) {
                 if (oInput) {
                     oInput.setValueState("Error");
                     oInput.setValueStateText("Bitte einen Namen eingeben");
@@ -617,16 +615,41 @@ sap.ui.define([
                 return;
             }
 
-            // Falls vorher ein Fehler angezeigt wurde → zurücksetzen
+            // ---- Automatisches Kürzen, falls zu lang ----
+            if (sName.length > MAX_LEN) {
+                sName = sName.substring(0, MAX_LEN);
+                oNewView.name = sName;          // Model aktualisieren
+                if (oInput) {
+                    oInput.setValue(sName);     // Anzeige im Dialog aktualisieren
+                }
+            }
+
+            // ---- Doppelte Namen verhindern (case-insensitive) ----
+            const aViews = oData.views || [];
+            const bExists = aViews.some(function (v) {
+                return (v.name || "").trim().toLowerCase() === sName.toLowerCase();
+            });
+
+            if (bExists) {
+                if (oInput) {
+                    oInput.setValueState("Error");
+                    oInput.setValueStateText("Eine Ansicht mit diesem Namen existiert bereits");
+                }
+                sap.m.MessageToast.show("Eine Ansicht mit diesem Namen existiert bereits");
+                return;
+            }
+
+            // evtl. gesetzten Fehlerzustand zurücksetzen
             if (oInput) {
                 oInput.setValueState("None");
+                oInput.setValueStateText("");
             }
 
             // aktuellen State einsammeln (Filter, Sortierung, etc.)
             const oState = this._getCurrentState();
 
-            // neue ID erstellen
-            const sId = "V" + (oData.views.length + 1);
+            // neue ID (sehr simpel)
+            const sId = "V" + (aViews.length + 1);
 
             const oView = {
                 id: sId,
@@ -641,15 +664,14 @@ sap.ui.define([
             oData.views.push(oView);
             oData.currentViewId = sId;
 
-            // Falls Standard gesetzt → andere deaktivieren
+            // falls als Standard markiert → alle anderen zurücksetzen
             if (oNewView.isDefault) {
-                oData.views.forEach(v => {
+                oData.views.forEach(function (v) {
                     v.isDefault = (v.id === sId);
                 });
             }
 
             oModel.refresh(true);
-
             this._oSaveViewDialog.close();
             this._oVariantDialog.close();
 
