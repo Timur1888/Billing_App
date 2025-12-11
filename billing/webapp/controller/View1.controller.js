@@ -5,14 +5,15 @@ sap.ui.define([
     "sap/ui/model/Filter",
     "sap/ui/model/FilterOperator",
     "billing/model/formatter",
-    "billing/util/FilterHelper",
     "sap/m/MessageBox",
     "sap/m/List",
     "sap/m/CustomListItem",
     "sap/m/HBox",
     "sap/m/CheckBox",
     "sap/m/Popover",
-    "sap/m/PlacementType"
+    "sap/m/PlacementType",
+    "billing/util/FilterHelper",
+    "billing/util/ViewsHelper"
 ], function (
     Controller,
     UIComponent,
@@ -20,14 +21,15 @@ sap.ui.define([
     Filter,
     FilterOperator,
     formatter,
-    FilterHelper,
     MessageBox,
     List,
     CustomListItem,
     HBox,
     CheckBox,
     Popover,
-    PlacementType
+    PlacementType,
+    FilterHelper,
+    ViewsHelper
 ) {
     "use strict";
 
@@ -39,23 +41,7 @@ sap.ui.define([
             var oModel = this.getOwnerComponent().getModel("backend");
             this._oBackendModel = oModel;
 
-            const oDefaultState = this._getCurrentState();
-
-            const oVariantModel = new JSONModel({
-                currentViewId: "STANDARD",
-                currentViewName: "Standard",
-                views: [{
-                    id: "STANDARD",
-                    name: "Standard",
-                    isDefault: true,
-                    isPublic: true,
-                    autoApply: false,
-                    createdBy: "SAP",
-                    state: oDefaultState
-                }]
-            });
-
-            this.getView().setModel(oVariantModel, "variant");
+            ViewsHelper.initVariantModel(this);
         },
 
 
@@ -324,440 +310,67 @@ sap.ui.define([
             oPopover.openBy(oEvent.getSource());
         },
         // ---------------------------------------------------
-        // Variant (Ansicht) speichern
+        // Variant UI-Handler -> Helper
         // ---------------------------------------------------
-
-        onOpenVariantPopover: function (oEvent) {
-            this._ensureAtLeastOneView();
-
-            if (!this._oVariantPopover) {
-                this._oVariantPopover = sap.ui.xmlfragment(
-                    "billing.view.VariantPopover",
-                    this
-                );
-                this.getView().addDependent(this._oVariantPopover);
-            }
-            this._oVariantPopover.openBy(oEvent.getSource());
+                onOpenVariantPopover: function (oEvent) {
+            ViewsHelper.openVariantPopover(this, oEvent);
         },
 
-        // Helper: sorgt nur dafür, dass NIE 0 Ansichten existieren
         _ensureAtLeastOneView: function () {
-            const oModel = this.getView().getModel("variant");
-            if (!oModel) { return; }
-
-            const oData  = oModel.getData() || {};
-            oData.views  = Array.isArray(oData.views) ? oData.views : [];
-
-            // wenn gar keine Ansicht mehr existiert -> neue Standardansicht anlegen
-            if (oData.views.length === 0) {
-                const oState = this._getCurrentState();
-                oData.views = [{
-                    id: "STANDARD",
-                    name: "Standard",
-                    isDefault: true,
-                    isPublic: true,
-                    autoApply: false,
-                    createdBy: "SAP",
-                    state: oState
-                }];
-                oData.currentViewId   = "STANDARD";
-                oData.currentViewName = "Standard";
-                oModel.setData(oData);
-                this._applyState(oState);
-            }
-        },
-
-        // Helper: stellt sicher, dass die Standard-Ansicht immer existiert
-        _ensureStandardView: function () {
-            const oModel = this.getView().getModel("variant");
-            if (!oModel) { return; }
-
-            const oData = oModel.getData() || {};
-            oData.views = Array.isArray(oData.views) ? oData.views : [];
-
-            if (oData.views.length === 0) {
-                const oState = this._getCurrentState();
-                oData.views = [{
-                    id: "STANDARD",
-                    name: "Standard",
-                    isDefault: true,
-                    isPublic: true,
-                    autoApply: false,
-                    createdBy: "SAP",
-                    state: oState
-                }];
-                oData.currentViewId   = "STANDARD";
-                oData.currentViewName = "Standard";
-                oModel.setData(oData);
-                this._applyState(oState);
-                return;
-            }
-
-            const bHasStandard = oData.views.some(v => v.id === "STANDARD");
-            if (!bHasStandard) {
-                const oState = this._getCurrentState();
-                oData.views.unshift({
-                    id: "STANDARD",
-                    name: "Standard",
-                    isDefault: !oData.views.some(v => v.isDefault),
-                    isPublic: true,
-                    autoApply: false,
-                    createdBy: "SAP",
-                    state: oState
-                });
-                oModel.setData(oData);
-            }
+            ViewsHelper.ensureAtLeastOneView(this);
         },
 
         onOpenManageDialog: function () {
-            // Kopie der aktuellen Varianten erstellen
-            const oVariantModel = this.getView().getModel("variant");
-            const aViews        = oVariantModel.getProperty("/views") || [];
-            const aCopy         = JSON.parse(JSON.stringify(aViews));
-
-            if (!this._oManageModel) {
-                this._oManageModel = new sap.ui.model.json.JSONModel();
-            }
-            this._oManageModel.setData({ views: aCopy });
-
-            if (!this._oManageDialog) {
-                this._oManageDialog = sap.ui.xmlfragment(
-                    "billing.view.ManageVariants",
-                    this
-                );
-                this.getView().addDependent(this._oManageDialog);
-            }
-
-            this._oManageDialog.setModel(this._oManageModel, "variantManage");
-            this._oManageDialog.open();
+            ViewsHelper.openManageDialog(this);
         },
 
         onCloseManageDialog: function () {
-            this._oManageDialog.close();
+            ViewsHelper.closeManageDialog(this);
         },
 
         onVariantDelete: function (oEvent) {
-            const oCtx         = oEvent.getSource().getBindingContext("variantManage");
-            const bIsDefault   = oCtx.getProperty("isDefault");
-            const oManageModel = this._oManageModel;
-            let   aViews       = oManageModel.getProperty("/views") || [];
-
-            // aktuelle Standardansicht darf nicht gelöscht werden
-            if (bIsDefault) {
-                sap.m.MessageToast.show("Die Standardansicht kann nicht gelöscht werden.");
-                return;
-            }
-
-            // es muss mindestens eine Ansicht übrig bleiben
-            if (aViews.length <= 1) {
-                sap.m.MessageToast.show("Es muss mindestens eine Ansicht vorhanden sein.");
-                return;
-            }
-
-            // Index aus dem Pfad ermitteln (z.B. "/views/3" -> 3)
-            const sPath   = oCtx.getPath();
-            const sIndex  = sPath.split("/").pop();
-            const iIndex  = parseInt(sIndex, 10);
-
-            if (!isNaN(iIndex) && iIndex >= 0 && iIndex < aViews.length) {
-                aViews.splice(iIndex, 1);
-                oManageModel.setProperty("/views", aViews);
-            }
+            ViewsHelper.variantDelete(this, oEvent);
         },
 
         onVariantDefaultToggle: function (oEvent) {
-            const oCtx         = oEvent.getSource().getBindingContext("variantManage");
-            const sId          = oCtx.getProperty("id");
-            const oManageModel = this._oManageModel;
-            const aViews       = oManageModel.getProperty("/views") || [];
-
-            aViews.forEach(v => {
-                v.isDefault = (v.id === sId);
-            });
-
-            oManageModel.setProperty("/views", aViews);
+            ViewsHelper.variantDefaultToggle(this, oEvent);
         },
 
         onCloseVariantDialog: function () {
-            this._oVariantDialog.close();
+            ViewsHelper.closeVariantDialog(this);
         },
-        
+
         onVariantSelected: function (oEvent) {
-            const oCtx = oEvent.getParameter("listItem").getBindingContext("variant");
-            const sId  = oCtx.getProperty("id");
-            const oView = oCtx.getObject(); // enthält auch state
-
-            const oVariantModel = this.getView().getModel("variant");
-            oVariantModel.setProperty("/currentViewId", sId);
-            oVariantModel.setProperty("/currentViewName", oView.name);
-
-            // hier gespeicherten Zustand anwenden
-            this._applyState(oView.state || {});
+            ViewsHelper.variantSelected(this, oEvent);
         },
 
         _applyState: function (oState) {
-            const oTokenizer = this.byId("filterTokenizer");
-            const oTable     = this.byId("tblBilling");
-
-            // -------- Tokens / Filter ----------
-            if (oTokenizer) {
-                oTokenizer.removeAllTokens();
-
-                if (oState && Array.isArray(oState.tokens)) {
-                    oState.tokens.forEach(function (oTokState) {
-                        const sType  = oTokState.filterType;
-                        const oToken = new sap.m.Token({
-                            text: oTokState.text,
-                            key:  sType,
-                            editable: true
-                        });
-
-                        oToken.data("filterType", sType);
-
-                        if (sType === "INVOICE_NO") {
-                            oToken.data("value", oTokState.value);
-                        }
-
-                        if (sType === "CREATION_DATE") {
-                            oToken.data("from", oTokState.from);
-                            oToken.data("to",   oTokState.to);
-                        }
-
-                        oTokenizer.addToken(oToken);
-                    });
-                }
-
-                // deine bestehende Filterlogik wiederverwenden
-                FilterHelper.applyFiltersFromTokens(this);
-            }
-
-            // -------- Spalten-Sichtbarkeit ----------
-            if (oTable && oState && Array.isArray(oState.columns)) {
-                const aCols = oTable.getColumns();
-
-                oState.columns.forEach(function (oColState) {
-                    const oCol = aCols.find(function (c) {
-                        return c.getId() === oColState.id;
-                    });
-
-                    if (oCol) {
-                        oCol.setVisible(!!oColState.visible);
-                    }
-                });
-            }
-
-            // Column-Settings-Popover neu aufbauen, damit die Checkboxen passen
-            if (this._oColumnPopover) {
-                this._oColumnPopover.destroy();
-                this._oColumnPopover = null;
-            }
-
-            // sorters aus oState.sorters kommen später dazu
+            ViewsHelper.applyState(this, oState);
         },
 
         onManageSearch: function (oEvent) {
-            const sQuery = (oEvent.getSource().getValue() || "").toLowerCase();
-
-            const oTable   = sap.ui.getCore().byId("tblManageVariants");
-            const oBinding = oTable && oTable.getBinding("items");
-            if (!oBinding) { return; }
-
-            const aFilters = [];
-            if (sQuery) {
-                aFilters.push(new Filter("name", FilterOperator.Contains, sQuery));
-            }
-            oBinding.filter(aFilters);
+            ViewsHelper.manageSearch(this, oEvent);
         },
 
-
-        //Controller für SaveViewDialog.fragment.xml
         onSaveViewAs: function () {
-            const oModel = this.getView().getModel("variant");
-
-            // Defaults für neue Ansicht setzen
-            oModel.setProperty("/newView", {
-                name: "",
-                isDefault: false,
-                isPivate: false,
-                autoApply: false
-            });
-
-            if (!this._oSaveViewDialog) {
-                this._oSaveViewDialog = sap.ui.xmlfragment(
-                    "billing.view.SaveViewDialog",
-                    this
-                );
-                this.getView().addDependent(this._oSaveViewDialog);
-            }
-            this._oSaveViewDialog.open();
+            ViewsHelper.saveViewAs(this);
         },
 
         onCancelSaveView: function () {
-            this._oSaveViewDialog.close();
+            ViewsHelper.cancelSaveView(this);
         },
 
         onConfirmSaveView: function () {
-            const oModel   = this.getView().getModel("variant");
-            const oData    = oModel.getData();
-            const oNewView = oData.newView;
-            const oInput   = sap.ui.getCore().byId("inpViewName");
-
-            // ---- Grundvalidierung: nicht leer, nicht nur Spaces ----
-            const MAX_LEN = 36;
-            let sName = (oNewView.name || "").trim();
-
-            if (!sName) {
-                if (oInput) {
-                    oInput.setValueState("Error");
-                    oInput.setValueStateText("Bitte einen Namen eingeben");
-                }
-                sap.m.MessageToast.show("Bitte einen Namen eingeben");
-                return;
-            }
-
-            // ---- Automatisches Kürzen, falls zu lang ----
-            if (sName.length > MAX_LEN) {
-                sName = sName.substring(0, MAX_LEN);
-                oNewView.name = sName;          // Model aktualisieren
-                if (oInput) {
-                    oInput.setValue(sName);     // Anzeige im Dialog aktualisieren
-                }
-            }
-
-            // ---- Doppelte Namen verhindern (case-insensitive) ----
-            const aViews = oData.views || [];
-            const bExists = aViews.some(function (v) {
-                return (v.name || "").trim().toLowerCase() === sName.toLowerCase();
-            });
-
-            if (bExists) {
-                if (oInput) {
-                    oInput.setValueState("Error");
-                    oInput.setValueStateText("Eine Ansicht mit diesem Namen existiert bereits");
-                }
-                sap.m.MessageToast.show("Eine Ansicht mit diesem Namen existiert bereits");
-                return;
-            }
-
-            // evtl. gesetzten Fehlerzustand zurücksetzen
-            if (oInput) {
-                oInput.setValueState("None");
-                oInput.setValueStateText("");
-            }
-
-            // aktuellen State einsammeln (Filter, Sortierung, etc.)
-            const oState = this._getCurrentState();
-
-            // neue ID (sehr simpel)
-            const sId = "V" + (aViews.length + 1);
-
-            const oView = {
-                id: sId,
-                name: sName,
-                isDefault: oNewView.isDefault,
-                isPrivate: oNewView.isPrivate,
-                autoApply: oNewView.autoApply,
-                createdBy: "Sie",
-                state: oState
-            };
-
-            oData.views.push(oView);
-            oData.currentViewId = sId;
-
-            // falls als Standard markiert → alle anderen zurücksetzen
-            if (oNewView.isDefault) {
-                oData.views.forEach(function (v) {
-                    v.isDefault = (v.id === sId);
-                });
-            }
-
-            oModel.refresh(true);
-            this._oSaveViewDialog.close();
-            this._oVariantDialog.close();
-
-            sap.m.MessageToast.show("Ansicht gespeichert: " + oView.name);
+            ViewsHelper.confirmSaveView(this);
         },
 
         _getCurrentState: function () {
-            const oTokenizer = this.byId("filterTokenizer");
-            const oTable     = this.byId("tblBilling");
-
-            // --- Tokens (Filter) sichern ---
-            const aTokensState = oTokenizer ? oTokenizer.getTokens().map(function (oToken) {
-                const sType = oToken.data("filterType");
-
-                const oEntry = {
-                    filterType: sType,
-                    text: oToken.getText()
-                };
-
-                if (sType === "INVOICE_NO") {
-                    oEntry.value = oToken.data("value");
-                }
-
-                if (sType === "CREATION_DATE") {
-                    oEntry.from = oToken.data("from");
-                    oEntry.to   = oToken.data("to");
-                }
-
-                return oEntry;
-            }) : [];
-
-            // --- Spalten-Sichtbarkeit sichern ---
-            let aColumnsState = [];
-            if (oTable) {
-                aColumnsState = oTable.getColumns().map(function (oCol) {
-                    return {
-                        id: oCol.getId(),          // eindeutige ID der Spalte
-                        visible: oCol.getVisible() // true/false
-                    };
-                });
-            }
-
-            return {
-                tokens:  aTokensState,
-                sorters: [],          // später für Sortierung
-                columns: aColumnsState
-            };
+            return ViewsHelper.getCurrentState(this);
         },
-
-
 
         onManageSave: function () {
-            const oVariantModel = this.getView().getModel("variant");
-            const oManageModel  = this._oManageModel;
-
-            const aViews = oManageModel.getProperty("/views") || [];
-
-            if (!aViews.length) {
-                sap.m.MessageToast.show("Es muss mindestens eine Ansicht vorhanden sein.");
-                return;
-            }
-
-            // sicherstellen, dass genau eine Default-Ansicht existiert
-            let oDefault = aViews.find(v => v.isDefault);
-            if (!oDefault) {
-                oDefault = aViews[0];
-                aViews.forEach(v => v.isDefault = (v === oDefault));
-            }
-
-            // Kopie zurück ins Haupt-Model schreiben
-            oVariantModel.setProperty("/views", aViews);
-            oVariantModel.setProperty("/currentViewId",   oDefault.id);
-            oVariantModel.setProperty("/currentViewName", oDefault.name);
-
-            this._applyState(oDefault.state || {});
-
-            if (this._oManageDialog) {
-                this._oManageDialog.close();
-            }
-        },
-        onCloseManageDialog: function () {
-            if (this._oManageDialog) {
-                this._oManageDialog.close();
-            }
-            // _oManageModel bleibt bestehen, wird beim nächsten Öffnen neu überschrieben
-        },
+            ViewsHelper.manageSave(this);
+        }
 
     });
 });
