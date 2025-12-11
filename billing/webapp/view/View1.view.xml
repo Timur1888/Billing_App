@@ -13,9 +13,11 @@
             <!-- Button wie im Screenshot: zeigt aktuelle Ansicht -->
             <Button
                 id="btnVariants"
-                text="{variant>/currentViewName}"
                 type="Transparent"
-                press=".onOpenVariantDialog" />
+                icon="sap-icon://dropdown"
+                text="{variant>/currentViewName}"
+                press=".onOpenVariantPopover"
+                class="sapUiTinyMarginBegin"/>
 
                 <Button id="btnCreate" text="Create" type="Emphasized"
                         class="myCreateBtn" press=".onCreate"/>

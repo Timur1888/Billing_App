@@ -36,33 +36,28 @@ sap.ui.define([
         formatter: formatter,
 
         onInit: function () {
-            // *** jetzt Backend-Model ***
             var oModel = this.getOwnerComponent().getModel("backend");
-            console.log("backend model:", oModel && oModel.getData());
-
             this._oBackendModel = oModel;
 
-        const oVariantModel = new sap.ui.model.json.JSONModel({
-            currentViewId: "STANDARD",
-            currentViewName: "Standard",
-            views: []   // füllen wir gleich
-        });
-        this.getView().setModel(oVariantModel, "variant");
+            const oDefaultState = this._getCurrentState();
 
-        // ➜ aktuellen Zustand (keine Filter, alle Spalten wie im XML) als Standard-State speichern
-        const oDefaultState = this._getCurrentState();
+            const oVariantModel = new JSONModel({
+                currentViewId: "STANDARD",
+                currentViewName: "Standard",
+                views: [{
+                    id: "STANDARD",
+                    name: "Standard",
+                    isDefault: true,
+                    isPublic: true,
+                    autoApply: false,
+                    createdBy: "SAP",
+                    state: oDefaultState
+                }]
+            });
 
-        oVariantModel.setProperty("/views/0", {
-            id: "STANDARD",
-            name: "Standard",
-            isDefault: true,
-            isPublic: false,
-            autoApply: false,
-            state: oDefaultState          // HIER: eigener State für Standard
-        });
-
-        this.getView().setModel(oVariantModel, "variant");
+            this.getView().setModel(oVariantModel, "variant");
         },
+
 
         onCreate: function () {},
 
@@ -332,18 +327,157 @@ sap.ui.define([
         // Variant (Ansicht) speichern
         // ---------------------------------------------------
 
-        //Controller für VariantDialog.fragment.xml
-        onOpenVariantDialog: function () {
-            if (!this._oVariantDialog) {
-                this._oVariantDialog = sap.ui.xmlfragment(
-                    "billing.view.VariantDialog",
+        onOpenVariantPopover: function (oEvent) {
+            this._ensureAtLeastOneView();
+
+            if (!this._oVariantPopover) {
+                this._oVariantPopover = sap.ui.xmlfragment(
+                    "billing.view.VariantPopover",
                     this
                 );
-                this.getView().addDependent(this._oVariantDialog);
+                this.getView().addDependent(this._oVariantPopover);
             }
-            this._oVariantDialog.open();
+            this._oVariantPopover.openBy(oEvent.getSource());
         },
 
+        // Helper: sorgt nur dafür, dass NIE 0 Ansichten existieren
+        _ensureAtLeastOneView: function () {
+            const oModel = this.getView().getModel("variant");
+            if (!oModel) { return; }
+
+            const oData  = oModel.getData() || {};
+            oData.views  = Array.isArray(oData.views) ? oData.views : [];
+
+            // wenn gar keine Ansicht mehr existiert -> neue Standardansicht anlegen
+            if (oData.views.length === 0) {
+                const oState = this._getCurrentState();
+                oData.views = [{
+                    id: "STANDARD",
+                    name: "Standard",
+                    isDefault: true,
+                    isPublic: true,
+                    autoApply: false,
+                    createdBy: "SAP",
+                    state: oState
+                }];
+                oData.currentViewId   = "STANDARD";
+                oData.currentViewName = "Standard";
+                oModel.setData(oData);
+                this._applyState(oState);
+            }
+        },
+
+        // Helper: stellt sicher, dass die Standard-Ansicht immer existiert
+        _ensureStandardView: function () {
+            const oModel = this.getView().getModel("variant");
+            if (!oModel) { return; }
+
+            const oData = oModel.getData() || {};
+            oData.views = Array.isArray(oData.views) ? oData.views : [];
+
+            if (oData.views.length === 0) {
+                const oState = this._getCurrentState();
+                oData.views = [{
+                    id: "STANDARD",
+                    name: "Standard",
+                    isDefault: true,
+                    isPublic: true,
+                    autoApply: false,
+                    createdBy: "SAP",
+                    state: oState
+                }];
+                oData.currentViewId   = "STANDARD";
+                oData.currentViewName = "Standard";
+                oModel.setData(oData);
+                this._applyState(oState);
+                return;
+            }
+
+            const bHasStandard = oData.views.some(v => v.id === "STANDARD");
+            if (!bHasStandard) {
+                const oState = this._getCurrentState();
+                oData.views.unshift({
+                    id: "STANDARD",
+                    name: "Standard",
+                    isDefault: !oData.views.some(v => v.isDefault),
+                    isPublic: true,
+                    autoApply: false,
+                    createdBy: "SAP",
+                    state: oState
+                });
+                oModel.setData(oData);
+            }
+        },
+
+        onOpenManageDialog: function () {
+            this._ensureAtLeastOneView();
+
+            if (!this._oManageDialog) {
+                this._oManageDialog = sap.ui.xmlfragment(
+                    "billing.view.ManageVariants",
+                    this
+                );
+                this.getView().addDependent(this._oManageDialog);
+            }
+            this._oManageDialog.open();
+        },
+
+        onCloseManageDialog: function () {
+            this._oManageDialog.close();
+        },
+
+        onVariantDelete: function (oEvent) {
+            const oCtx       = oEvent.getSource().getBindingContext("variant");
+            const sId        = oCtx.getProperty("id");
+            const bIsDefault = oCtx.getProperty("isDefault");
+
+            // aktuelle Standardansicht darf NIE gelöscht werden
+            if (bIsDefault) {
+                sap.m.MessageToast.show("Die Standardansicht kann nicht gelöscht werden.");
+                return;
+            }
+
+            const oModel = this.getView().getModel("variant");
+            let   aViews = oModel.getProperty("/views") || [];
+
+            // letzte verbleibende Ansicht darf nicht gelöscht werden
+            if (aViews.length <= 1) {
+                sap.m.MessageToast.show("Es muss mindestens eine Ansicht vorhanden sein.");
+                return;
+            }
+
+            // Ansicht entfernen
+            aViews = aViews.filter(v => v.id !== sId);
+            oModel.setProperty("/views", aViews);
+
+            // Default-Ansicht nach Löschen neu bestimmen
+            let oDefault = aViews.find(v => v.isDefault) || aViews[0];
+            if (!oDefault) {
+                oDefault = aViews[0];
+                oDefault.isDefault = true;
+                oModel.setProperty("/views", aViews);
+            }
+
+            oModel.setProperty("/currentViewId",   oDefault.id);
+            oModel.setProperty("/currentViewName", oDefault.name);
+            this._applyState(oDefault.state || {});
+
+            this._ensureAtLeastOneView();
+        },
+
+        onVariantDefaultToggle: function (oEvent) {
+            const oCtx = oEvent.getSource().getBindingContext("variant");
+            const sId = oCtx.getProperty("id");
+
+            const oModel = this.getView().getModel("variant");
+            const aViews = oModel.getProperty("/views");
+
+            aViews.forEach(v => {
+                v.isDefault = (v.id === sId);
+            });
+
+            oModel.refresh(true);
+        },
         onCloseVariantDialog: function () {
             this._oVariantDialog.close();
         },
@@ -421,6 +555,19 @@ sap.ui.define([
             // sorters aus oState.sorters kommen später dazu
         },
 
+        onManageSearch: function (oEvent) {
+            const sQuery = (oEvent.getSource().getValue() || "").toLowerCase();
+
+            const oTable   = sap.ui.getCore().byId("tblManageVariants");
+            const oBinding = oTable && oTable.getBinding("items");
+            if (!oBinding) { return; }
+
+            const aFilters = [];
+            if (sQuery) {
+                aFilters.push(new Filter("name", FilterOperator.Contains, sQuery));
+            }
+            oBinding.filter(aFilters);
+        },
 
 
         //Controller für SaveViewDialog.fragment.xml
@@ -431,7 +578,7 @@ sap.ui.define([
             oModel.setProperty("/newView", {
                 name: "",
                 isDefault: false,
-                isPublic: false,
+                isPivate: false,
                 autoApply: false
             });
 
@@ -469,8 +616,9 @@ sap.ui.define([
                 id: sId,
                 name: oNewView.name,
                 isDefault: oNewView.isDefault,
-                isPublic: oNewView.isPublic,
+                isPrivate: oNewView.isPrivate,
                 autoApply: oNewView.autoApply,
+                createdBy: "Sie",
                 state: oState
             };
 
@@ -533,5 +681,39 @@ sap.ui.define([
                 columns: aColumnsState
             };
         },
+
+
+
+        onManageSave: function () {
+            const oModel = this.getView().getModel("variant");
+            const aViews = oModel.getProperty("/views") || [];
+
+            // sicherstellen, dass genau eine Default-Ansicht existiert
+            let oDefault = aViews.find(v => v.isDefault);
+            if (!oDefault && aViews.length) {
+                oDefault = aViews[0];
+                aViews.forEach(v => v.isDefault = (v === oDefault));
+                oModel.setProperty("/views", aViews);
+            }
+
+            this._ensureAtLeastOneView();
+
+            // aktuelle Ansicht auf Default setzen
+            oDefault = aViews.find(v => v.isDefault) || aViews[0];
+            if (oDefault) {
+                oModel.setProperty("/currentViewId",   oDefault.id);
+                oModel.setProperty("/currentViewName", oDefault.name);
+                this._applyState(oDefault.state || {});
+            }
+
+            if (this._oManageDialog) {
+                this._oManageDialog.close();
+            }
+        },
+
+        onCloseManageDialog: function () {
+            this._oManageDialog.close();
+        },
+
     });
 });

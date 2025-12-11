@@ -1,0 +1,48 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core">
+
+    <Popover
+        id="variantPopover"
+        placement="Bottom"
+        title="Ansichten"
+        contentWidth="17rem">
+
+        <List
+            id="variantList"
+            items="{
+                path: 'variant>/views'
+            }"
+            mode="SingleSelectMaster"
+            selectionChange=".onVariantSelected">
+
+            <CustomListItem>
+                <HBox
+                    justifyContent="SpaceBetween"
+                    alignItems="Center"
+                    class="sapUiSmallMarginBegin">
+
+                    <Text text="{variant>name}" />
+
+                </HBox>
+            </CustomListItem>
+
+        </List>
+
+        <footer>
+            <Toolbar design="Transparent">
+                <Button
+                    text="Sichern als"
+                    press=".onSaveViewAs"/>
+
+                <!-- Spacer schiebt Verwalten ganz nach rechts -->
+                <ToolbarSpacer />
+
+                <Button
+                    text="Verwalten"
+                    press=".onOpenManageDialog"/>
+            </Toolbar>
+        </footer>
+
+    </Popover>
+</core:FragmentDefinition>
