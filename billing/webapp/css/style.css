@@ -23,3 +23,9 @@
   position: absolute;
   left: -9999px;   /* aus dem sichtbaren Bereich schieben */
 }
+
+#btnVariants {
+    font-weight: bold;
+    padding-right: 0.5rem;
+}
+

@@ -5,14 +5,15 @@ sap.ui.define([
     "sap/ui/model/Filter",
     "sap/ui/model/FilterOperator",
     "billing/model/formatter",
-    "billing/util/FilterHelper",
     "sap/m/MessageBox",
     "sap/m/List",
     "sap/m/CustomListItem",
     "sap/m/HBox",
     "sap/m/CheckBox",
     "sap/m/Popover",
-    "sap/m/PlacementType"
+    "sap/m/PlacementType",
+    "billing/util/FilterHelper",
+    "billing/util/ViewsHelper"
 ], function (
     Controller,
     UIComponent,
@@ -20,14 +21,15 @@ sap.ui.define([
     Filter,
     FilterOperator,
     formatter,
-    FilterHelper,
     MessageBox,
     List,
     CustomListItem,
     HBox,
     CheckBox,
     Popover,
-    PlacementType
+    PlacementType,
+    FilterHelper,
+    ViewsHelper
 ) {
     "use strict";
 
@@ -36,12 +38,12 @@ sap.ui.define([
         formatter: formatter,
 
         onInit: function () {
-            // *** jetzt Backend-Model ***
             var oModel = this.getOwnerComponent().getModel("backend");
-            console.log("backend model:", oModel && oModel.getData());
-
             this._oBackendModel = oModel;
+
+            ViewsHelper.initVariantModel(this);
         },
+
 
         onCreate: function () {},
 
@@ -307,30 +309,67 @@ sap.ui.define([
             const oPopover = this._createColumnSettingsPopover();
             oPopover.openBy(oEvent.getSource());
         },
-
         // ---------------------------------------------------
-        // Status-Formatter
+        // Variant UI-Handler -> Helper
         // ---------------------------------------------------
-        formatStatusIcon: function (sState) {
-            switch (sState) {
-                case "ccDS_Finished":
-                    return "sap-icon://paper-plane";
-                case "ccDS_UserAction":
-                    return "sap-icon://action";
-                default:
-                    return "sap-icon://question-mark";
-            }
+                onOpenVariantPopover: function (oEvent) {
+            ViewsHelper.openVariantPopover(this, oEvent);
         },
 
-        formatStatusState: function (sState) {
-            switch (sState) {
-                case "ccDS_Finished":
-                    return sap.ui.core.ValueState.Success;
-                case "ccDS_UserAction":
-                    return sap.ui.core.ValueState.Warning;
-                default:
-                    return sap.ui.core.ValueState.None;
-            }
+        _ensureAtLeastOneView: function () {
+            ViewsHelper.ensureAtLeastOneView(this);
+        },
+
+        onOpenManageDialog: function () {
+            ViewsHelper.openManageDialog(this);
+        },
+
+        onCloseManageDialog: function () {
+            ViewsHelper.closeManageDialog(this);
+        },
+
+        onVariantDelete: function (oEvent) {
+            ViewsHelper.variantDelete(this, oEvent);
+        },
+
+        onVariantDefaultToggle: function (oEvent) {
+            ViewsHelper.variantDefaultToggle(this, oEvent);
+        },
+
+        onCloseVariantDialog: function () {
+            ViewsHelper.closeVariantDialog(this);
+        },
+
+        onVariantSelected: function (oEvent) {
+            ViewsHelper.variantSelected(this, oEvent);
+        },
+
+        _applyState: function (oState) {
+            ViewsHelper.applyState(this, oState);
+        },
+
+        onManageSearch: function (oEvent) {
+            ViewsHelper.manageSearch(this, oEvent);
+        },
+
+        onSaveViewAs: function () {
+            ViewsHelper.saveViewAs(this);
+        },
+
+        onCancelSaveView: function () {
+            ViewsHelper.cancelSaveView(this);
+        },
+
+        onConfirmSaveView: function () {
+            ViewsHelper.confirmSaveView(this);
+        },
+
+        _getCurrentState: function () {
+            return ViewsHelper.getCurrentState(this);
+        },
+
+        onManageSave: function () {
+            ViewsHelper.manageSave(this);
         }
 
     });

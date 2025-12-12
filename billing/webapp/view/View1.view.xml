@@ -4,10 +4,20 @@
     xmlns:core="sap.ui.core">
 
     <Page id="page" title="{i18n>title}">
-
+        
         <customHeader>
+            
             <OverflowToolbar id="otbHeader">
                 <Title id="hdrTitle" text="Billing"/>
+
+            <!-- Button wie im Screenshot: zeigt aktuelle Ansicht -->
+            <Button
+                id="btnVariants"
+                type="Transparent"
+                icon="sap-icon://dropdown"
+                text="{variant>/currentViewName}"
+                press=".onOpenVariantPopover"
+                class="sapUiTinyMarginBegin"/>
 
                 <Button id="btnCreate" text="Create" type="Emphasized"
                         class="myCreateBtn" press=".onCreate"/>
@@ -75,11 +85,11 @@
                                 text=""
                                 icon="{
                                     path: 'backend>State',
-                                    formatter: '.formatStatusIcon'
+                                    formatter: '.formatter.formatStatusIcon'
                                 }"
                                 state="{
                                     path: 'backend>State',
-                                    formatter: '.formatStatusState'
+                                    formatter: '.formatter.formatStatusState'
                                 }"
                             />
 
