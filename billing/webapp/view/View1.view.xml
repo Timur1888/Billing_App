@@ -150,7 +150,10 @@
                             }" />
 
                             <!-- Transfer Format -->
-                            <Text text="{backend>MetaData/Object/Data/Basics/TransferFormat}" />
+                            <Text text="{
+                                path: 'backend>MetaData/Object/Data/Basics/TransferFormat',
+                                formatter: '.formatter.formatTransferFormat'
+                                }" />
 
                             <!-- Delivery Method -->
                             <Text text="{

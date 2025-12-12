@@ -23,6 +23,13 @@ sap.ui.define([
             return sMethod.replace(/^ccDM_/, "");
         },
 
+        // --- Formatter für TransferFormat ccBF_* -> * ---
+        formatTransferFormat: function (sMethod) {
+            if (!sMethod) { return ""; }
+            return sMethod.replace(/^ccBF_/, "");
+        },
+
+
         // --- Datum aus $date in lesbares Datum konvertieren ---
         formatDate: function (sDate) {
             if (!sDate) { return ""; }
