@@ -13,7 +13,8 @@ sap.ui.define([
     "sap/m/Popover",
     "sap/m/PlacementType",
     "billing/util/FilterHelper",
-    "billing/util/ViewsHelper"
+    "billing/util/ViewsHelper",
+    "billing/util/MainViewButtonsHelper"
 ], function (
     Controller,
     UIComponent,
@@ -29,7 +30,8 @@ sap.ui.define([
     Popover,
     PlacementType,
     FilterHelper,
-    ViewsHelper
+    ViewsHelper,
+    MainViewButtonsHelper
 ) {
     "use strict";
 
@@ -48,157 +50,28 @@ sap.ui.define([
         onCreate: function () {},
 
         // ---------------------------------------------------
-        // Refreschen
+        // Refreschen -> MainViewButtonsHelper.js
         // ---------------------------------------------------
-        onReload: async function () {
-            const oComponent = this.getOwnerComponent();
-            const oTable     = this.byId("tblBilling");
-
-            // optional: Busy-Indicator für Tabelle
-            if (oTable) {
-                oTable.setBusy(true);
-            }
-
-            try {
-                // neu vom Backend laden
-                await oComponent.reloadBackendData();
-            } catch (e) {
-                console.error("Fehler beim Reload:", e);
-            }
-
-            // UI-Zustand zurücksetzen
-            if (oTable) {
-                oTable.removeSelections(true);
-                oTable.setBusy(false);
-            }
-
-            const oDeleteButton = this.byId("btnDelete");
-            if (oDeleteButton) {
-                oDeleteButton.setEnabled(false);
-            }
-
-            const oTokenizer = this.byId("filterTokenizer");
-            if (oTokenizer) {
-                oTokenizer.removeAllTokens();
-                oTokenizer.setVisible(false);
-            }
+        onReload: function () {
+        return MainViewButtonsHelper.onReload(this);
         },
 
         // ---------------------------------------------------
-        // Löschen
+        // Löschen -> MainViewButtonsHelper.js
         // ---------------------------------------------------
         onSelectionChange: function (oEvent) {
-            const oTable        = oEvent.getSource();
-            const aSelected     = oTable.getSelectedItems();
-            const oDeleteButton = this.byId("btnDelete");
-
-            oDeleteButton.setEnabled(aSelected.length > 0);
+        return MainViewButtonsHelper.onSelectionChange(this, oEvent);
         },
 
         onDelete: function () {
-            const oTable         = this.byId("tblBilling");
-            const aSelectedItems = oTable.getSelectedItems();
-
-            if (!aSelectedItems.length) {
-                return;
-            }
-
-            MessageBox.confirm(
-                `Do you really want to delete ${aSelectedItems.length} item(s)?`,
-                {
-                    title: "Confirm Deletion",
-                    actions: [MessageBox.Action.DELETE, MessageBox.Action.CANCEL],
-                    emphasizedAction: MessageBox.Action.DELETE,
-                    onClose: function (sAction) {
-                        if (sAction !== MessageBox.Action.DELETE) {
-                            return;
-                        }
-
-                        const oModel = this.getOwnerComponent().getModel("backend");
-                        const aData  = oModel.getProperty("/value") || [];
-
-                        const aIndices = aSelectedItems.map(function (oItem) {
-                            const oCtx  = oItem.getBindingContext("backend");
-                            const sPath = oCtx.getPath();   // z.B. "/value/3"
-                            return parseInt(sPath.split("/").pop(), 10);
-                        });
-
-                        aIndices
-                            .sort(function (a, b) { return b - a; })
-                            .forEach(function (iIndex) {
-                                aData.splice(iIndex, 1);
-                            });
-
-                        oModel.setProperty("/value", aData);
-
-                        oTable.removeSelections(true);
-                        this.byId("btnDelete").setEnabled(false);
-                    }.bind(this)
-                }
-            );
+        return MainViewButtonsHelper.onDelete(this);
         },
 
         // ---------------------------------------------------
-        // Suche
+        // Suche -> MainViewButtonsHelper.js
         // ---------------------------------------------------
         onSearch: function (oEvent) {
-            const sQuery = oEvent.getParameter("query")?.trim().toLowerCase();
-            const oTable = this.byId("tblBilling");
-            const oBinding = oTable.getBinding("items");
-
-            if (!oBinding) {
-                return;
-            }
-
-            if (!sQuery) {
-                oBinding.filter([]);
-                return;
-            }
-
-            const aFilters = [
-                new Filter({
-                    path: "MetaData/Object/Data/Basics/Number/Value",
-                    operator: FilterOperator.Contains,
-                    value1: sQuery
-                }),
-                new Filter({
-                    path: "MetaData/Object/Data/Basics/Recipient/Name",
-                    operator: FilterOperator.Contains,
-                    value1: sQuery
-                }),
-                new Filter({
-                    path: "MetaData/Object/Data/Basics/Recipient/Email/0/Address",
-                    operator: FilterOperator.Contains,
-                    value1: sQuery
-                })
-            ];
-
-            const oCombinedFilter = new Filter({
-                filters: aFilters,
-                and: false
-            });
-
-            const aData = this.getOwnerComponent()
-                .getModel("backend")
-                .getProperty("/value") || [];
-
-            const aMatches = aData.filter(item => {
-                const invoice = String(item.MetaData?.Object?.Data?.Basics?.Number?.Value || "").toLowerCase();
-                const name    = String(item.MetaData?.Object?.Data?.Basics?.Recipient?.Name || "").toLowerCase();
-                const email   = String(item.MetaData?.Object?.Data?.Basics?.Recipient?.Email?.[0]?.Address || "").toLowerCase();
-
-                return (
-                    invoice.includes(sQuery) ||
-                    name.includes(sQuery)    ||
-                    email.includes(sQuery)
-                );
-            });
-
-            if (aMatches.length === 0) {
-                return;
-            }
-
-            oBinding.filter(oCombinedFilter);
+        return MainViewButtonsHelper.onSearch(this, oEvent);
         },
 
         // ---------------------------------------------------
@@ -225,7 +98,7 @@ sap.ui.define([
         },
 
         // ---------------------------------------------------
-        // Filter-Button & Dialog
+        // Filter-Button & Dialog -> FilterHelper.js
         // ---------------------------------------------------
         onFilter: function (oEvent) {
             const oPopover = FilterHelper.createFilterPopover(this);
@@ -310,10 +183,10 @@ sap.ui.define([
             oPopover.openBy(oEvent.getSource());
         },
         // ---------------------------------------------------
-        // Variant UI-Handler -> Helper
+        // Variant UI-Handler -> ViewsHelper
         // ---------------------------------------------------
-                onOpenVariantPopover: function (oEvent) {
-            ViewsHelper.openVariantPopover(this, oEvent);
+        onOpenVariantPopover: function (oEvent) {
+        ViewsHelper.openVariantPopover(this, oEvent);
         },
 
         _ensureAtLeastOneView: function () {
