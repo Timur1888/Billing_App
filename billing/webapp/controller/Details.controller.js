@@ -30,14 +30,18 @@ sap.ui.define([
                 ]
             });
             this.getView().setModel(oTemplateModel, "template");
-            
-            // ✅ PDFViewer Instanz (lazy) + gemerkte ObjectURL
-            this._oPdfViewer = null;
-            this._sCurrentObjectUrl = null;
+
+            // ✅ PDFViewer wie im UI5 Sample (einmalig)
+            this._oPdfViewer = new PDFViewer({
+                isTrustedSource: true,
+                showDownloadButton: true
+            });
+            this.getView().addDependent(this._oPdfViewer);
 
             const oRouter = UIComponent.getRouterFor(this);
             oRouter.getRoute("DetailsRoute").attachPatternMatched(this._onRouteMatched, this);
         },
+
   //---------------------------------------------------------------------------------------------------Edit Templates----------------------------------------------------------------
         onEditTemplate: function () {
             // Dialog lazy laden
@@ -118,19 +122,30 @@ sap.ui.define([
 
             const aBlobs = oInvoice?.MetaData?.Blobs || [];
 
-            // Priorität: ccBT_Invoice + application/pdf, sonst erstes PDF, sonst *.pdf
-            const oPdfBlob =
-                aBlobs.find(b => b?.MimeType === "application/pdf" && b?.Type === "ccBT_Invoice")
-                || aBlobs.find(b => b?.MimeType === "application/pdf")
-                || aBlobs.find(b => (b?.FileName || "").toLowerCase().endsWith(".pdf"));
+            // Nur PDFs als "Items" für Carousel
+            const aPdfItems = aBlobs
+                .filter(b => b?.MimeType === "application/pdf" || (b?.FileName || "").toLowerCase().endsWith(".pdf"))
+                .map(b => {
+                    return {
+                        sortId: b.SortId,
+                        id: b.Id,
+                        fileName: b.FileName || b.Name || "PDF",
+                        pdfLink: b.Link || "",
+                        previewLink: b?.ViewBlobs?.[0]?.Link || "" // kann leer sein
+                    };
+                })
+                // optional sortieren: SortId aufsteigend
+                .sort((a, c) => (a.sortId ?? 0) - (c.sortId ?? 0));
 
-            const sLink = oPdfBlob?.Link || "";
+            // Liste ins Model
+            oModel.setProperty("/CurrentInvoice/BlobItems", aPdfItems);
 
-            // falls du später ObjectURL nutzt, würdest du hier vorher revoke machen
-            oModel.setProperty("/CurrentInvoice/PdfSource", sLink);
+            // Default: erstes Item selektieren
+            const oFirst = aPdfItems[0] || null;
+            oModel.setProperty("/CurrentInvoice/SelectedBlobIndex", 0);
+            oModel.setProperty("/CurrentInvoice/PdfSource", oFirst?.pdfLink || "");
+            oModel.setProperty("/CurrentInvoice/PdfPreviewUrl", oFirst?.previewLink || "");
         },
-
-
 
         // PDF: Popup öffnen (wie UI5 Sample)
         onPdfPress: function () {
@@ -142,51 +157,25 @@ sap.ui.define([
                 return;
             }
 
-            // Dialog + PDFViewer lazy erzeugen (Popup wie Sample, aber zuverlässig)
-            if (!this._oPdfDialog) {
-                this._oPdfDialog = new sap.m.Dialog({
-                    title: "Invoice PDF",
-                    contentWidth: "80vw",
-                    contentHeight: "80vh",
-                    resizable: true,
-                    draggable: true,
-                    horizontalScrolling: false,
-                    verticalScrolling: false,
-                    endButton: new sap.m.Button({
-                        text: "Close",
-                        press: () => this._oPdfDialog.close()
-                    })
-                });
-
-                this._oPdfViewer = new (sap.m.PDFViewer)({
-                    width: "100%",
-                    height: "100%",
-                    isTrustedSource: true,
-                    showDownloadButton: true
-                });
-
-                this._oPdfDialog.addContent(this._oPdfViewer);
-                this.getView().addDependent(this._oPdfDialog);
-            }
-
             this._oPdfViewer.setSource(sSource);
-            this._oPdfDialog.open();
+            this._oPdfViewer.setTitle("Invoice PDF");
+            this._oPdfViewer.open();
         },
 
-        onAfterRendering: function () {
-            const oDom = document.getElementById("pdfOverlay");
-            if (oDom && !this._pdfOverlayBound) {
-                this._pdfOverlayBound = true;
-                oDom.addEventListener("click", () => this.onPdfPress());
-            }
+        onBlobPageChanged: function (oEvent) {
+            const iIndex = oEvent.getParameter("activePages")[0]; // Carousel liefert activePages array
+            const oModel = this.getOwnerComponent().getModel("backend");
+
+            const aItems = oModel.getProperty("/CurrentInvoice/BlobItems") || [];
+            const oItem = aItems[iIndex];
+
+            oModel.setProperty("/CurrentInvoice/SelectedBlobIndex", iIndex);
+            oModel.setProperty("/CurrentInvoice/PdfSource", oItem?.pdfLink || "");
+            oModel.setProperty("/CurrentInvoice/PdfPreviewUrl", oItem?.previewLink || "");
         },
-        onExit: function () {
-            // Nur nötig, wenn du ObjectURLs erzeugst (Base64 -> Blob -> URL.createObjectURL)
-            if (this._sCurrentObjectUrl) {
-                try { URL.revokeObjectURL(this._sCurrentObjectUrl); } catch (e) {}
-                this._sCurrentObjectUrl = null;
-            }
-        },
+
+
+
 
     onClose: function () {
       const oRouter = UIComponent.getRouterFor(this);

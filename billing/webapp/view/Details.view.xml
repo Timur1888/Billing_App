@@ -32,31 +32,51 @@
                             <!-- ==========================================
                             PDF direkt im Panel + Klick öffnet Popup
                             ========================================== -->
-                        <GenericTile
-                            id="tilePdf"
-                            header="Invoice PDF"
-                            subheader="Click to open"
-                            press=".onPdfPress"
-                            frameType="OneByOne"
-                            class="sapUiSmallMargin"
-                            width="100%">
+<VBox class="sapUiSmallMargin">
+<Title text="Invoice PDF" level="H3" class="sapUiTinyMarginBottom"/>
 
-                            <TileContent>
-                                <content>
-                                    <VBox width="100%" height="600px" class="sapUiContentPadding">
-                                        <PDFViewer
-                                            id="pdfEmbedded"
-                                            source="{backend>/CurrentInvoice/PdfSource}"
-                                            title="Invoice PDF"
-                                            displayType="Embedded"
-                                            isTrustedSource="true"
-                                            height="100%"
-                                            width="100%" />
-                                    </VBox>
-                                </content>
-                            </TileContent>
+<Carousel
+    id="blobCarousel"
+    height="70vh"
+    loop="false"
+    class="sapUiContentPadding"
+    pageChanged=".onBlobPageChanged"
+    pages="{backend>/CurrentInvoice/BlobItems}">
 
-                        </GenericTile>
+    <pages>
+        <!-- Template für eine Carousel-Seite -->
+        <VBox width="100%" height="70vh">
+
+            <!-- Preview vorhanden -->
+            <Image
+                src="{backend>previewLink}"
+                alt="{backend>fileName}"
+                width="100%"
+                height="70vh"
+                decorative="false"
+                densityAware="false"
+                press=".onPdfPress"
+                visible="{= !!${backend>previewLink} }" />
+
+            <!-- Keine Preview -> Placeholder -->
+            <VBox
+                width="100%"
+                height="70vh"
+                alignItems="Center"
+                justifyContent="Center"
+                visible="{= !${backend>previewLink} }">
+
+                <core:Icon src="sap-icon://pdf-attachment" size="4rem" />
+                <Text text="{backend>fileName}" class="sapUiSmallMarginTop"/>
+                <Link text="Open PDF" press=".onPdfPress" class="sapUiSmallMarginTop"/>
+            </VBox>
+
+        </VBox>
+    </pages>
+</Carousel>
+
+
+</VBox>
                         <VBox
                             width="100%"
                             class="sapUiSmallMargin">
