@@ -18,6 +18,8 @@
         </headerContent>
 
         <content>
+            <Button text="Show PDF" icon="sap-icon://pdf-attachment" press=".onShowInvoicePdf"/>
+
             <!-- Tabs: Overview / History -->
             <IconTabBar
                 id="itbDetails"

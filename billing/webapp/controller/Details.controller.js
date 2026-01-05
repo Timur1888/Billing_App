@@ -3,8 +3,9 @@ sap.ui.define([
     "sap/ui/core/UIComponent",
     "sap/ui/unified/FileUploader",
     "sap/ui/core/Fragment",
-    "sap/ui/model/json/JSONModel"
-], (Controller, UIComponent, FileUploader, Fragment, JSONModel) => {
+    "sap/ui/model/json/JSONModel",
+    "sap/m/PDFViewer"
+], (Controller, UIComponent, FileUploader, Fragment, JSONModel, PDFViewer) => {
     "use strict";
 
     return Controller.extend("billing.controller.Details", {
@@ -28,6 +29,10 @@ sap.ui.define([
                 ]
             });
             this.getView().setModel(oTemplateModel, "template");
+            
+            // ✅ PDFViewer Instanz (lazy) + gemerkte ObjectURL
+            this._oPdfViewer = null;
+            this._sCurrentObjectUrl = null;
 
             const oRouter = UIComponent.getRouterFor(this);
             oRouter.getRoute("DetailsRoute").attachPatternMatched(this._onRouteMatched, this);
@@ -64,38 +69,138 @@ sap.ui.define([
         },
 
 
-      _onRouteMatched: function (oEvent) {
-          const sInvoiceId = oEvent.getParameter("arguments").invoiceId;
+    _onRouteMatched: function (oEvent) {
+        const sInvoiceId = oEvent.getParameter("arguments").invoiceId;
 
-          // Layout sicherstellen
-          const oMainViewModel = this.getView().getModel("mainView");
-          oMainViewModel.setProperty("/layout", "TwoColumnsBeginExpanded");
+        // Layout sicherstellen (falls du mainView im Details auch hast)
+        const oMainViewModel = this.getView().getModel("mainView");
+        if (oMainViewModel) {
+            oMainViewModel.setProperty("/layout", "TwoColumnsBeginExpanded");
+        }
 
-          // 👉 Model "testData" holen
-          const oModel = this.getView().getModel("testData");
+        // ✅ Backend-Model holen (aus Component ist am sichersten)
+        const oModel = this.getOwnerComponent().getModel("backend");
+        if (!oModel) {
+            console.error("Model 'backend' nicht gefunden");
+            return;
+        }
 
-          // Liste liegt unter "/value"
-          const aInvoices = oModel.getProperty("/value") || [];
+        const aInvoices = oModel.getProperty("/value") || [];
 
-          // passendes Objekt anhand der Rechnungsnummer suchen
-          const oInvoice = aInvoices.find(function (o) {
-              return o?.MetaData?.Object?.Data?.Basics?.Number?.Value === sInvoiceId;
-              // falls du trimmed hast, hier auch ggf. trim()
-          });
+        const oInvoice = aInvoices.find(function (o) {
+            return o?.MetaData?.Object?.Data?.Basics?.Number?.Value === sInvoiceId;
+        });
 
-          if (oInvoice) {
-              // Daten im Model unter /CurrentInvoice ablegen
-              oModel.setProperty("/CurrentInvoice", oInvoice);
+        if (oInvoice) {
+            // ✅ /CurrentInvoice dynamisch anlegen/überschreiben
+            oModel.setProperty("/CurrentInvoice", oInvoice);
 
-              // View an diesen Knoten des Models "testData" binden
-              this.getView().bindElement({
-                  path: "/CurrentInvoice",
-                  model: "testData"
-              });
-          } else {
-              console.warn("Keine Rechnung mit ID", sInvoiceId, "gefunden");
-          }
-      },
+            // ✅ View an /CurrentInvoice binden
+            this.getView().bindElement({
+                path: "/CurrentInvoice",
+                model: "backend"
+            });
+
+            this._preparePdfSourceFromInvoice(oInvoice);
+
+        } else {
+                console.warn("Keine Rechnung mit ID", sInvoiceId, "gefunden");
+            }
+    },
+
+        // ==========================================================
+        // PDF: Source vorbereiten (URL oder Base64 -> ObjectURL)
+        // ==========================================================
+        _preparePdfSourceFromInvoice: function (oInvoice) {
+            const oModel = this.getOwnerComponent().getModel("backend");
+            if (!oModel) { return; }
+
+            const aBlobs = oInvoice?.MetaData?.Blobs || [];
+
+            // Priorität: ccBT_Invoice + application/pdf, sonst erstes PDF, sonst *.pdf
+            const oPdfBlob =
+                aBlobs.find(b => b?.MimeType === "application/pdf" && b?.Type === "ccBT_Invoice")
+                || aBlobs.find(b => b?.MimeType === "application/pdf")
+                || aBlobs.find(b => (b?.FileName || "").toLowerCase().endsWith(".pdf"));
+
+            const sLink = oPdfBlob?.Link || "";
+
+            // falls du später ObjectURL nutzt, würdest du hier vorher revoke machen
+            oModel.setProperty("/CurrentInvoice/PdfSource", sLink);
+        },
+
+        _base64ToObjectUrl: function (sBase64, sMimeType) {
+            const sClean = sBase64.includes("base64,") ? sBase64.split("base64,")[1] : sBase64;
+
+            const byteChars = atob(sClean);
+            const byteNumbers = new Array(byteChars.length);
+            for (let i = 0; i < byteChars.length; i++) {
+                byteNumbers[i] = byteChars.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], { type: sMimeType });
+            return URL.createObjectURL(blob);
+        },
+        // ==========================================================
+        // PDF: Popup öffnen (wie UI5 Sample)
+        // ==========================================================
+        onShowInvoicePdf: function () {
+            const oModel = this.getOwnerComponent().getModel("backend");
+            const sSource = oModel.getProperty("/CurrentInvoice/PdfSource");
+
+            if (!sSource) {
+                console.warn("Keine PDF-Quelle vorhanden (/CurrentInvoice/PdfSource ist leer).");
+                return;
+            }
+
+            if (!this._oPdfViewer) {
+                this._oPdfViewer = new PDFViewer({// ==========================================================
+// PDF: Popup öffnen (wie UI5 Sample)
+// ==========================================================
+onShowInvoicePdf: function () {
+    const oModel = this.getOwnerComponent().getModel("backend");
+    const sSource = oModel.getProperty("/CurrentInvoice/PdfSource");
+
+    if (!sSource) {
+        console.warn("Keine PDF-Quelle vorhanden (/CurrentInvoice/PdfSource ist leer).");
+        return;
+    }
+
+    if (!this._oPdfViewer) {
+        this._oPdfViewer = new PDFViewer({
+            title: "Invoice PDF"
+        });
+        this.getView().addDependent(this._oPdfViewer);
+    }
+
+    this._oPdfViewer.setSource(sSource);
+    this._oPdfViewer.open();
+},
+
+onExit: function () {
+    // Nur nötig, wenn du ObjectURLs erzeugst (Base64 -> Blob -> URL.createObjectURL)
+    if (this._sCurrentObjectUrl) {
+        try { URL.revokeObjectURL(this._sCurrentObjectUrl); } catch (e) {}
+        this._sCurrentObjectUrl = null;
+    }
+},
+                    title: "Invoice PDF"
+                });
+                this.getView().addDependent(this._oPdfViewer);
+            }
+
+            this._oPdfViewer.setSource(sSource);
+            this._oPdfViewer.open();
+        },
+
+        onExit: function () {
+            // Nur nötig, wenn du ObjectURLs erzeugst (Base64 -> Blob -> URL.createObjectURL)
+            if (this._sCurrentObjectUrl) {
+                try { URL.revokeObjectURL(this._sCurrentObjectUrl); } catch (e) {}
+                this._sCurrentObjectUrl = null;
+            }
+        },
+
     onClose: function () {
       const oRouter = UIComponent.getRouterFor(this);
       oRouter.navTo("RouteView1");
