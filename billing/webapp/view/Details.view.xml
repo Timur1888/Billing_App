@@ -5,7 +5,7 @@
     xmlns:core="sap.ui.core"
     xmlns:unified="sap.ui.unified">
 
-    <Page title="Panel Title" showFooter="true">  
+    <Page title="Panel Title" showFooter="true">
         <!-- X-Schließen-Button rechts oben -->
         <headerContent>
             <Button
@@ -18,8 +18,6 @@
         </headerContent>
 
         <content>
-            <Button text="Show PDF" icon="sap-icon://pdf-attachment" press=".onShowInvoicePdf"/>
-
             <!-- Tabs: Overview / History -->
             <IconTabBar
                 id="itbDetails"
@@ -31,6 +29,34 @@
 
                     <!-- ================== OVERVIEW TAB ================== -->
                     <IconTabFilter key="overview" text="Overview">
+                            <!-- ==========================================
+                            PDF direkt im Panel + Klick öffnet Popup
+                            ========================================== -->
+                        <GenericTile
+                            id="tilePdf"
+                            header="Invoice PDF"
+                            subheader="Click to open"
+                            press=".onPdfPress"
+                            frameType="OneByOne"
+                            class="sapUiSmallMargin"
+                            width="100%">
+
+                            <TileContent>
+                                <content>
+                                    <VBox width="100%" height="600px" class="sapUiContentPadding">
+                                        <PDFViewer
+                                            id="pdfEmbedded"
+                                            source="{backend>/CurrentInvoice/PdfSource}"
+                                            title="Invoice PDF"
+                                            displayType="Embedded"
+                                            isTrustedSource="true"
+                                            height="100%"
+                                            width="100%" />
+                                    </VBox>
+                                </content>
+                            </TileContent>
+
+                        </GenericTile>
                         <VBox
                             width="100%"
                             class="sapUiSmallMargin">
@@ -45,15 +71,14 @@
                                     showValueHelp="true"
                                     valueHelpOnly="true"
                                     valueHelpIconSrc="sap-icon://add-document"
-                                    valueHelpRequest=".onBrowseInvoice"   />
+                                    valueHelpRequest=".onBrowseInvoice" />
 
-                                
                                 <List inset="false">
                                     <StandardListItem title="invoice.pdf"/>
                                     <StandardListItem title="example.pdf"/>
                                 </List>
 
-                                    <!-- Unsichtbarer Uploader -->
+                                <!-- Unsichtbarer Uploader -->
                                 <unified:FileUploader
                                     id="invoiceUploader"
                                     class="hiddenFileUploader"
@@ -69,8 +94,8 @@
                                     showValueHelp="true"
                                     valueHelpOnly="true"
                                     valueHelpIconSrc="sap-icon://add-document"
-                                    valueHelpRequest=".onBrowseAttachments"    />
-                                
+                                    valueHelpRequest=".onBrowseAttachments" />
+
                                 <List inset="false">
                                     <StandardListItem title="example.pdf"/>
                                     <StandardListItem title="attachment.jpg"/>
@@ -91,7 +116,7 @@
                             <Title text="Output" level="H4" class="sapUiMediumMarginTop"/>
 
                             <VBox class="sapUiSmallMarginTop" width="97%">
-                                
+
                                 <Select width="100%" class="sapUiSmallMarginBottom">
                                     <items>
                                         <core:Item key="transF" text="Transfer Format"/>
@@ -100,7 +125,6 @@
                                     </items>
                                 </Select>
 
-                                
                                 <Select width="100%" class="sapUiSmallMarginBottom">
                                     <items>
                                         <core:Item key="delMeth" text="Delivery Method"/>
@@ -109,30 +133,22 @@
                                     </items>
                                 </Select>
 
-                                
                                 <Input placeholder="Receiver" class="sapUiSmallMarginBottom"/>
-
-                                
                                 <Input placeholder="CC" class="sapUiSmallMarginBottom"/>
-
-                                
                                 <Input placeholder="BCC" class="sapUiSmallMarginBottom"/>
                             </VBox>
 
                             <!-- Job Settings -->
                             <Title text="Job Settings" level="H4" class="sapUiMediumMarginTop"/>
 
-                                <HBox class="sapUiSmallMarginTop" alignItems="Center">
-                                    <!-- Toggle links -->
-                                    <Switch
-                                        state="true"
-                                        customTextOn=""
-                                        customTextOff=""
-                                        class="sapUiTinyMarginEnd"/>
-
-                                    <!-- Text rechts daneben -->
-                                    <Text text="Manual Dispatch"/>
-                                </HBox>
+                            <HBox class="sapUiSmallMarginTop" alignItems="Center">
+                                <Switch
+                                    state="true"
+                                    customTextOn=""
+                                    customTextOff=""
+                                    class="sapUiTinyMarginEnd"/>
+                                <Text text="Manual Dispatch"/>
+                            </HBox>
 
                             <!-- Templates -->
                             <Title text="Templates" level="H4" class="sapUiMediumMarginTop"/>

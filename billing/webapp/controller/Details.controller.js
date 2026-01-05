@@ -4,8 +4,9 @@ sap.ui.define([
     "sap/ui/unified/FileUploader",
     "sap/ui/core/Fragment",
     "sap/ui/model/json/JSONModel",
-    "sap/m/PDFViewer"
-], (Controller, UIComponent, FileUploader, Fragment, JSONModel, PDFViewer) => {
+    "sap/m/PDFViewer",
+    "sap/m/PDFViewerDisplayType"
+], (Controller, UIComponent, FileUploader, Fragment, JSONModel, PDFViewer, PDFViewerDisplayType) => {
     "use strict";
 
     return Controller.extend("billing.controller.Details", {
@@ -129,22 +130,10 @@ sap.ui.define([
             oModel.setProperty("/CurrentInvoice/PdfSource", sLink);
         },
 
-        _base64ToObjectUrl: function (sBase64, sMimeType) {
-            const sClean = sBase64.includes("base64,") ? sBase64.split("base64,")[1] : sBase64;
 
-            const byteChars = atob(sClean);
-            const byteNumbers = new Array(byteChars.length);
-            for (let i = 0; i < byteChars.length; i++) {
-                byteNumbers[i] = byteChars.charCodeAt(i);
-            }
-            const byteArray = new Uint8Array(byteNumbers);
-            const blob = new Blob([byteArray], { type: sMimeType });
-            return URL.createObjectURL(blob);
-        },
-        // ==========================================================
+
         // PDF: Popup öffnen (wie UI5 Sample)
-        // ==========================================================
-        onShowInvoicePdf: function () {
+        onPdfPress: function () {
             const oModel = this.getOwnerComponent().getModel("backend");
             const sSource = oModel.getProperty("/CurrentInvoice/PdfSource");
 
@@ -153,46 +142,44 @@ sap.ui.define([
                 return;
             }
 
-            if (!this._oPdfViewer) {
-                this._oPdfViewer = new PDFViewer({// ==========================================================
-// PDF: Popup öffnen (wie UI5 Sample)
-// ==========================================================
-onShowInvoicePdf: function () {
-    const oModel = this.getOwnerComponent().getModel("backend");
-    const sSource = oModel.getProperty("/CurrentInvoice/PdfSource");
-
-    if (!sSource) {
-        console.warn("Keine PDF-Quelle vorhanden (/CurrentInvoice/PdfSource ist leer).");
-        return;
-    }
-
-    if (!this._oPdfViewer) {
-        this._oPdfViewer = new PDFViewer({
-            title: "Invoice PDF"
-        });
-        this.getView().addDependent(this._oPdfViewer);
-    }
-
-    this._oPdfViewer.setSource(sSource);
-    this._oPdfViewer.open();
-},
-
-onExit: function () {
-    // Nur nötig, wenn du ObjectURLs erzeugst (Base64 -> Blob -> URL.createObjectURL)
-    if (this._sCurrentObjectUrl) {
-        try { URL.revokeObjectURL(this._sCurrentObjectUrl); } catch (e) {}
-        this._sCurrentObjectUrl = null;
-    }
-},
-                    title: "Invoice PDF"
+            // Dialog + PDFViewer lazy erzeugen (Popup wie Sample, aber zuverlässig)
+            if (!this._oPdfDialog) {
+                this._oPdfDialog = new sap.m.Dialog({
+                    title: "Invoice PDF",
+                    contentWidth: "80vw",
+                    contentHeight: "80vh",
+                    resizable: true,
+                    draggable: true,
+                    horizontalScrolling: false,
+                    verticalScrolling: false,
+                    endButton: new sap.m.Button({
+                        text: "Close",
+                        press: () => this._oPdfDialog.close()
+                    })
                 });
-                this.getView().addDependent(this._oPdfViewer);
+
+                this._oPdfViewer = new (sap.m.PDFViewer)({
+                    width: "100%",
+                    height: "100%",
+                    isTrustedSource: true,
+                    showDownloadButton: true
+                });
+
+                this._oPdfDialog.addContent(this._oPdfViewer);
+                this.getView().addDependent(this._oPdfDialog);
             }
 
             this._oPdfViewer.setSource(sSource);
-            this._oPdfViewer.open();
+            this._oPdfDialog.open();
         },
 
+        onAfterRendering: function () {
+            const oDom = document.getElementById("pdfOverlay");
+            if (oDom && !this._pdfOverlayBound) {
+                this._pdfOverlayBound = true;
+                oDom.addEventListener("click", () => this.onPdfPress());
+            }
+        },
         onExit: function () {
             // Nur nötig, wenn du ObjectURLs erzeugst (Base64 -> Blob -> URL.createObjectURL)
             if (this._sCurrentObjectUrl) {
