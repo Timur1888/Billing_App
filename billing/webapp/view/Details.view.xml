@@ -37,22 +37,20 @@
 
 <Carousel
     id="blobCarousel"
-    height="70vh"
+    class="sapUiContentPadding pdfCarousel"
     loop="false"
-    class="sapUiContentPadding"
     pageChanged=".onBlobPageChanged"
     pages="{backend>/CurrentInvoice/BlobItems}">
 
     <pages>
         <!-- Template für eine Carousel-Seite -->
-        <VBox width="100%" height="70vh">
+        <VBox width="100%" class="pdfPageScroll">
 
             <!-- Preview vorhanden -->
             <Image
                 src="{backend>previewLink}"
                 alt="{backend>fileName}"
                 width="100%"
-                height="70vh"
                 decorative="false"
                 densityAware="false"
                 press=".onPdfPress"
@@ -61,7 +59,7 @@
             <!-- Keine Preview -> Placeholder -->
             <VBox
                 width="100%"
-                height="70vh"
+                class="pdfPageScroll"
                 alignItems="Center"
                 justifyContent="Center"
                 visible="{= !${backend>previewLink} }">
@@ -74,6 +72,7 @@
         </VBox>
     </pages>
 </Carousel>
+
 
 
 </VBox>

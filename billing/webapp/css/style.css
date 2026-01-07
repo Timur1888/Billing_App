@@ -29,3 +29,17 @@
     padding-right: 0.5rem;
 }
 
+/* Scrollbereich für die PDF-Preview innerhalb des Carousels */
+.pdfPageScroll {
+  height: 75vh;      /* mehr Platz als vorher */
+  overflow: auto;    /* scrollen, falls unten abgeschnitten */
+}
+
+/* Bild nicht verzerren, aber volle Breite */
+.pdfPageScroll img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+
