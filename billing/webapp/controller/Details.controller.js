@@ -1,12 +1,11 @@
 sap.ui.define([
     "sap/ui/core/mvc/Controller",
     "sap/ui/core/UIComponent",
-    "sap/ui/unified/FileUploader",
     "sap/ui/core/Fragment",
     "sap/ui/model/json/JSONModel",
     "sap/m/PDFViewer",
-    "sap/m/PDFViewerDisplayType"
-], (Controller, UIComponent, FileUploader, Fragment, JSONModel, PDFViewer, PDFViewerDisplayType) => {
+    "billing/util/Details_PDFViewHelper"
+], (Controller, UIComponent, Fragment, JSONModel, PDFViewer, Details_PDFViewHelper) => {
     "use strict";
 
     return Controller.extend("billing.controller.Details", {
@@ -113,77 +112,23 @@ sap.ui.define([
             }
     },
 
-        // ==========================================================
-        // PDF: Source vorbereiten (URL oder Base64 -> ObjectURL)
-        // ==========================================================
+    //---------------------------------------------------------------------------------------------------PDF abzeigen----------------------------------------------------------------
         _preparePdfSourceFromInvoice: function (oInvoice) {
-            const oModel = this.getOwnerComponent().getModel("backend");
-            if (!oModel) { return; }
-
-            const aBlobs = oInvoice?.MetaData?.Blobs || [];
-
-            // Nur PDFs als "Items" für Carousel
-            const aPdfItems = aBlobs
-                .filter(b => b?.MimeType === "application/pdf" || (b?.FileName || "").toLowerCase().endsWith(".pdf"))
-                .map(b => {
-                    return {
-                        sortId: b.SortId,
-                        id: b.Id,
-                        fileName: b.FileName || b.Name || "PDF",
-                        pdfLink: b.Link || "",
-                        previewLink: b?.ViewBlobs?.[0]?.Link || "" // kann leer sein
-                    };
-                })
-                // optional sortieren: SortId aufsteigend
-                .sort((a, c) => (a.sortId ?? 0) - (c.sortId ?? 0));
-
-            // Liste ins Model
-            oModel.setProperty("/CurrentInvoice/BlobItems", aPdfItems);
-
-            // Default: erstes Item selektieren
-            const oFirst = aPdfItems[0] || null;
-            oModel.setProperty("/CurrentInvoice/SelectedBlobIndex", 0);
-            oModel.setProperty("/CurrentInvoice/PdfSource", oFirst?.pdfLink || "");
-            oModel.setProperty("/CurrentInvoice/PdfPreviewUrl", oFirst?.previewLink || "");
+        return Details_PDFViewHelper.preparePdfSourceFromInvoice(this, oInvoice);
         },
 
-        // PDF: Popup öffnen (wie UI5 Sample)
         onPdfPress: function () {
-            const oModel = this.getOwnerComponent().getModel("backend");
-            const sSource = oModel.getProperty("/CurrentInvoice/PdfSource");
-
-            if (!sSource) {
-                console.warn("Keine PDF-Quelle vorhanden (/CurrentInvoice/PdfSource ist leer).");
-                return;
-            }
-
-            this._oPdfViewer.setSource(sSource);
-            this._oPdfViewer.setTitle("Invoice PDF");
-            this._oPdfViewer.open();
+        return Details_PDFViewHelper.onPdfPress(this);
         },
 
         onBlobPageChanged: function (oEvent) {
-            const iIndex = oEvent.getParameter("activePages")[0]; // Carousel liefert activePages array
-            const oModel = this.getOwnerComponent().getModel("backend");
-
-            const aItems = oModel.getProperty("/CurrentInvoice/BlobItems") || [];
-            const oItem = aItems[iIndex];
-
-            oModel.setProperty("/CurrentInvoice/SelectedBlobIndex", iIndex);
-            oModel.setProperty("/CurrentInvoice/PdfSource", oItem?.pdfLink || "");
-            oModel.setProperty("/CurrentInvoice/PdfPreviewUrl", oItem?.previewLink || "");
+        return Details_PDFViewHelper.onBlobPageChanged(this, oEvent);
         },
 
+        onClose: function () {
+        return Details_PDFViewHelper.onClose(this);
+        },
 
-
-
-    onClose: function () {
-      const oRouter = UIComponent.getRouterFor(this);
-      oRouter.navTo("RouteView1");
-
-      const oMainViewModel = this.getView().getModel("mainView");
-      oMainViewModel.setProperty("/layout", "OneColumn");
-    },
     //---------------------------------------------------------------------------------------------------Uploader----------------------------------------------------------------
     onBrowseInvoice: function () {
         var oUploader = this.byId("invoiceUploader");

@@ -79,12 +79,10 @@
                         <VBox
                             width="100%"
                             class="sapUiSmallMargin">
-
-                            <!-- Upload (Attachments) -->
-                            <Title text="Upload (Attachments)" level="H4"/>
-
                             <!-- Invoice File -->
                             <VBox class="sapUiSmallMarginTop" width="97%">
+                                <!-- Upload (Invoice) -->
+                                <Title text="Upload (Invoice)" level="H4"/>
                                 <Input
                                     placeholder="Browse or drop a invoice file"
                                     showValueHelp="true"
@@ -97,7 +95,7 @@
                                     <StandardListItem title="example.pdf"/>
                                 </List>
 
-                                <!-- Unsichtbarer Uploader -->
+                                <!-- Unsichtbarer Uploader für Invoices-->
                                 <unified:FileUploader
                                     id="invoiceUploader"
                                     class="hiddenFileUploader"
@@ -107,7 +105,10 @@
                             </VBox>
 
                             <!-- Attachments -->
+
                             <VBox class="sapUiSmallMarginTop" width="97%">
+                            <!-- Upload (Attachments) -->
+                            <Title text="Upload (Attachments)" level="H4"/>
                                 <Input
                                     placeholder="Browse or drop attachments"
                                     showValueHelp="true"
