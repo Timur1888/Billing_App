@@ -21,6 +21,9 @@ sap.ui.define([
 
       // Daten im Hintergrund laden
       this._loadBackendData();
+
+      const oAuthModel = new JSONModel({ tokenType: "", token: "" });
+      this.setModel(oAuthModel, "auth");
     },
 
     // öffentliche Methode für Controller
@@ -86,6 +89,11 @@ sap.ui.define([
           console.error("Backend Request Error:", response.status, response.statusText);
           return;
         }
+
+        this.getModel("auth").setData({
+          tokenType: loginData?.Session?.TokenType || "",
+          token:     loginData?.Session?.Token || ""
+        });
 
         const json = await response.json();
         this.getModel("backend").setData(json);

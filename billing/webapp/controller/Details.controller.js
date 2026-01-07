@@ -110,6 +110,7 @@ sap.ui.define([
         } else {
                 console.warn("Keine Rechnung mit ID", sInvoiceId, "gefunden");
             }
+        this._rebuildLists();
     },
 
     //---------------------------------------------------------------------------------------------------PDF abzeigen----------------------------------------------------------------
@@ -130,6 +131,64 @@ sap.ui.define([
         },
 
     //---------------------------------------------------------------------------------------------------Uploader----------------------------------------------------------------
+    _postAppendBlobs: async function (aBlobPayload) {
+    const sDocId = this._getCurrentDocumentId();
+    if (!sDocId) throw new Error("Keine CurrentInvoice/Id gefunden.");
+
+    const oAuth = this.getOwnerComponent().getModel("auth");
+    const sType = oAuth?.getProperty("/tokenType");
+    const sTok  = oAuth?.getProperty("/token");
+
+    if (!sType || !sTok) {
+        throw new Error("Kein Token im auth-Model gefunden (Login/Token speichern prüfen).");
+    }
+
+    const sUrl =
+        `https://test.app.clarc.com:443/application/api/v1/documenthub/document(${encodeURIComponent(sDocId)})/appendblobs`;
+
+    const r = await fetch(sUrl, {
+        method: "POST",
+        credentials: "include",              // wichtig, wie bei dir
+        headers: {
+        "Content-Type": "application/json",
+        "Authorization": `${sType} ${sTok}` // z.B. "Bearer <token>"
+        },
+        body: JSON.stringify({ Blobs: aBlobPayload })
+    });
+
+    if (!r.ok) {
+        const t = await r.text().catch(() => "");
+        throw new Error(`appendblobs failed (${r.status}): ${t}`);
+    }
+
+    return await r.json();
+    },
+
+    _rebuildLists: function () {
+    const oModel = this.getOwnerComponent().getModel("backend");
+    const aBlobs = oModel.getProperty("/CurrentInvoice/MetaData/Blobs") || [];
+    oModel.setProperty("/CurrentInvoice/InvoiceBlobs", aBlobs.filter(b => b?.Type === "ccBT_Invoice"));
+    oModel.setProperty("/CurrentInvoice/AttachmentBlobs", aBlobs.filter(b => b?.Type !== "ccBT_Invoice"));
+    },
+
+    _getCurrentDocumentId: function () {
+        const oModel = this.getOwnerComponent().getModel("backend");
+        return oModel.getProperty("/CurrentInvoice/Id") || "";
+    },
+
+    _fileToBase64: function (oFile) {
+        return new Promise((resolve, reject) => {
+            const r = new FileReader();
+            r.onload = () => {
+                const s = String(r.result || "");
+                const base64 = s.includes("base64,") ? s.split("base64,")[1] : s;
+                resolve(base64);
+            };
+            r.onerror = reject;
+            r.readAsDataURL(oFile);
+        });
+    },
+
     onBrowseInvoice: function () {
         var oUploader = this.byId("invoiceUploader");
         if (!oUploader) {
@@ -154,18 +213,49 @@ sap.ui.define([
         }
     },
 
-    onInvoiceChange: function (oEvent) {
-        var aFiles = oEvent.getParameter("files") || [];
-        var oModel = this.getView().getModel("upload");
+    onInvoiceChange: async function (oEvent) {
+        const aFiles = oEvent.getParameter("files") || [];
+        if (!aFiles.length) { return; }
 
-        if (aFiles.length > 0) {
-            oModel.setProperty("/invoiceFiles", [{
-                name: aFiles[0].name,
-                file: aFiles[0]
-            }]);
+        const oFile = aFiles[0];
+        const oBackendModel = this.getOwnerComponent().getModel("backend");
+
+        try {
+            this.getView().setBusy(true);
+
+            const sB64 = await this._fileToBase64(oFile);
+
+            const aPayload = [{
+                FileName: oFile.name,
+                MimeType: oFile.type || "application/octet-stream",
+                Name: oFile.name,
+                SortId: 0,
+                Type: "ccBT_Invoice",
+                Upload: {
+                    GenerateViewBlob: "ccVG_Instant",
+                    BlobId: "",
+                    BlobData: sB64
+                }
+            }];
+
+            const oResp = await this._postAppendBlobs(aPayload);
+
+            // ✅ Backend-Model updaten -> Liste aktualisieren
+            if (oResp?.value) {
+                oBackendModel.setProperty("/CurrentInvoice/MetaData/Blobs", oResp.value);
+                this._rebuildLists();
+            }
+
+            // optional: FileUploader resetten, damit gleicher File nochmal gewählt werden kann
+            const oUploader = this.byId("invoiceUploader");
+            if (oUploader) { oUploader.clear(); }
+
+        } catch (e) {
+            console.error("Invoice Upload Fehler:", e);
+        } finally {
+            this.getView().setBusy(false);
         }
     },
-
 
     onBrowseAttachments: function () {
         var oUploader = this.byId("attachmentsUploader");
@@ -189,20 +279,69 @@ sap.ui.define([
         }
     },
 
-    onAttachmentsChange: function (oEvent) {
-        var aFiles = oEvent.getParameter("files") || [];
-        var oModel = this.getView().getModel("upload");
-        var aCurrent = oModel.getProperty("/attachments") || [];
+    onAttachmentsChange: async function (oEvent) {
+        const aFiles = oEvent.getParameter("files") || [];
+        if (!aFiles.length) { return; }
 
-        aFiles.forEach(function (oFile) {
-            aCurrent.push({
-                name: oFile.name,
-                file: oFile
-            });
-        });
+        const oBackendModel = this.getOwnerComponent().getModel("backend");
 
-        oModel.setProperty("/attachments", aCurrent);
-    }
+        try {
+            this.getView().setBusy(true);
 
-        });
+            const aPayload = [];
+            for (const oFile of aFiles) {
+                const sB64 = await this._fileToBase64(oFile);
+
+                aPayload.push({
+                    FileName: oFile.name,
+                    MimeType: oFile.type || "application/octet-stream",
+                    Name: oFile.name,
+                    SortId: 0,
+                    Type: "ccBT_Attachment", // falls euer Backend anderes erwartet -> anpassen
+                    Upload: {
+                        GenerateViewBlob: "ccVG_Instant",
+                        BlobId: "",
+                        BlobData: sB64
+                    }
+                });
+            }
+
+            const oResp = await this._postAppendBlobs(aPayload);
+
+            if (oResp?.value) {
+                oBackendModel.setProperty("/CurrentInvoice/MetaData/Blobs", oResp.value);
+                this._rebuildLists();
+            }
+
+            const oUploader = this.byId("attachmentsUploader");
+            if (oUploader) { oUploader.clear(); }
+
+        } catch (e) {
+            console.error("Attachments Upload Fehler:", e);
+        } finally {
+            this.getView().setBusy(false);
+        }
+    },
+
+    onBlobOpen: function (oEvent) {
+        const oItem = oEvent.getParameter("listItem") || oEvent.getSource();
+        const oCtx  = oItem.getBindingContext("backend");
+        const oBlob = oCtx && oCtx.getObject();
+
+        const sUrl = oBlob?.Link;
+        if (!sUrl) { return; }
+
+        this._openPdfPopup(sUrl, oBlob?.FileName || "Document");
+    },
+
+    _openPdfPopup: function (sUrl, sTitle) {
+        // Viewer existiert schon aus onInit()
+        this._oPdfViewer.setSource(sUrl);
+        this._oPdfViewer.setTitle(sTitle);
+
+        // Popup (wie Sample)
+        // (Wenn du DisplayType gesetzt hast: hier NICHT "Popup" als String, sondern Enum)
+        this._oPdfViewer.open();
+    },
+    });
 });

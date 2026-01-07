@@ -90,9 +90,13 @@
                                     valueHelpIconSrc="sap-icon://add-document"
                                     valueHelpRequest=".onBrowseInvoice" />
 
-                                <List inset="false">
-                                    <StandardListItem title="invoice.pdf"/>
-                                    <StandardListItem title="example.pdf"/>
+                                <List
+                                    items="{backend>/CurrentInvoice/InvoiceBlobs}"
+                                    itemPress=".onBlobOpen">
+                                    <StandardListItem
+                                        title="{backend>FileName}"
+                                        description="{backend>MimeType}"
+                                        type="Active" />
                                 </List>
 
                                 <!-- Unsichtbarer Uploader für Invoices-->
@@ -115,12 +119,13 @@
                                     valueHelpOnly="true"
                                     valueHelpIconSrc="sap-icon://add-document"
                                     valueHelpRequest=".onBrowseAttachments" />
-
-                                <List inset="false">
-                                    <StandardListItem title="example.pdf"/>
-                                    <StandardListItem title="attachment.jpg"/>
-                                    <StandardListItem title="attachment.jpg"/>
-                                    <StandardListItem title="attachment.jpg"/>
+                                <List
+                                    items="{backend>/CurrentInvoice/AttachmentBlobs}"
+                                    itemPress=".onBlobOpen">
+                                    <StandardListItem
+                                        title="{backend>FileName}"
+                                        description="{backend>MimeType}"
+                                        type="Active" />
                                 </List>
 
                                 <!-- Unsichtbarer Uploader für Anhänge -->
