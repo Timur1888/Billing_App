@@ -193,10 +193,10 @@ sap.ui.define([
     },
 
     _rebuildLists: function () {
-    const oModel = this.getOwnerComponent().getModel("backend");
-    const aBlobs = oModel.getProperty("/CurrentInvoice/MetaData/Blobs") || [];
-    oModel.setProperty("/CurrentInvoice/InvoiceBlobs", aBlobs.filter(b => b?.Type === "ccBT_Invoice"));
-    oModel.setProperty("/CurrentInvoice/AttachmentBlobs", aBlobs.filter(b => b?.Type !== "ccBT_Invoice"));
+        const oModel = this.getOwnerComponent().getModel("backend");
+        const aBlobs = oModel.getProperty("/CurrentInvoice/MetaData/Blobs") || [];
+        oModel.setProperty("/CurrentInvoice/InvoiceBlobs", aBlobs.filter(b => b?.Type === "ccBT_Invoice"));
+        oModel.setProperty("/CurrentInvoice/AttachmentBlobs", aBlobs.filter(b => b?.Type !== "ccBT_Invoice"));
     },
 
     _getCurrentDocumentId: function () {
@@ -270,7 +270,10 @@ sap.ui.define([
 
             // ✅ Backend-Model updaten -> Liste aktualisieren
             if (oResp?.value) {
-                oBackendModel.setProperty("/CurrentInvoice/MetaData/Blobs", oResp.value);
+                const aOld = oBackendModel.getProperty("/CurrentInvoice/MetaData/Blobs") || [];
+                const aNew = this._mergeBlobsKeepOrder(aOld, oResp.value);
+
+                oBackendModel.setProperty("/CurrentInvoice/MetaData/Blobs", aNew);
                 this._rebuildLists();
             }
 
@@ -337,7 +340,10 @@ sap.ui.define([
             const oResp = await this._postAppendBlobs(aPayload);
 
             if (oResp?.value) {
-                oBackendModel.setProperty("/CurrentInvoice/MetaData/Blobs", oResp.value);
+                const aOld = oBackendModel.getProperty("/CurrentInvoice/MetaData/Blobs") || [];
+                const aNew = this._mergeBlobsKeepOrder(aOld, oResp.value);
+
+                oBackendModel.setProperty("/CurrentInvoice/MetaData/Blobs", aNew);
                 this._rebuildLists();
             }
 
@@ -405,6 +411,39 @@ sap.ui.define([
         // (Wenn du DisplayType gesetzt hast: hier NICHT "Popup" als String, sondern Enum)
         this._oPdfViewer.open();
     },
+
+    _mergeBlobsKeepOrder: function (aOld, aFromResp) {
+        const oldArr  = Array.isArray(aOld) ? aOld : [];
+        const respArr = Array.isArray(aFromResp) ? aFromResp : [];
+
+        // Map für schnelles Lookup (nach Id)
+        const mResp = new Map(respArr.map(b => [b?.Id, b]));
+
+        // 1) alte Reihenfolge behalten, aber Objekte mit Resp "auffrischen"
+        const aMerged = [];
+        const seen = new Set();
+
+        for (const bOld of oldArr) {
+            const id = bOld?.Id;
+            if (!id) continue;
+
+            aMerged.push(mResp.get(id) || bOld);
+            seen.add(id);
+        }
+
+        // 2) neue aus Resp hinten anhängen
+        for (const bNew of respArr) {
+            const id = bNew?.Id;
+            if (!id) continue;
+            if (!seen.has(id)) {
+                aMerged.push(bNew);
+                seen.add(id);
+            }
+        }
+
+        return aMerged;
+    },
+
 
     });
 });

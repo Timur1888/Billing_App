@@ -8,33 +8,50 @@ sap.ui.define([
     // PDF: Source vorbereiten (URL oder Base64 -> ObjectURL)
     // ==========================================================
     preparePdfSourceFromInvoice: function (oController, oInvoice) {
-      const oModel = oController.getOwnerComponent().getModel("backend");
-      if (!oModel) { return; }
+        const oModel = oController.getOwnerComponent().getModel("backend");
+        if (!oModel) { return; }
 
-      const aBlobs = oInvoice?.MetaData?.Blobs || [];
+        const aBlobs = oInvoice?.MetaData?.Blobs || [];
 
-      // Nur PDFs als "Items" für Carousel
-      const aPdfItems = aBlobs
-        .filter(b => b?.MimeType === "application/pdf" || (b?.FileName || "").toLowerCase().endsWith(".pdf"))
-        .map(b => {
-          return {
-            sortId: b.SortId,
-            id: b.Id,
-            fileName: b.FileName || b.Name || "PDF",
-            pdfLink: b.Link || "",
-            previewLink: b?.ViewBlobs?.[0]?.Link || "" // kann leer sein
-          };
-        })
-        .sort((a, c) => (a.sortId ?? 0) - (c.sortId ?? 0));
+        // Nur PDFs als "Items" (Reihenfolge bleibt wie in aBlobs!)
+        const aPdfItems = aBlobs
+            .filter(b => b?.MimeType === "application/pdf"
+                || (b?.FileName || "").toLowerCase().endsWith(".pdf"))
+            .map(b => ({
+                sortId: b.SortId, // lassen wir drin (vllt. später wieder relevant), aber NICHT zum sortieren benutzen
+                id: b.Id,
+                fileName: b.FileName || b.Name || "PDF",
+                pdfLink: b.Link || "",
+                previewLink: b?.ViewBlobs?.[0]?.Link || ""
+            }));
 
-      oModel.setProperty("/CurrentInvoice/BlobItems", aPdfItems);
+        oModel.setProperty("/CurrentInvoice/BlobItems", aPdfItems);
 
-      // Default: erstes Item selektieren
-      const oFirst = aPdfItems[0] || null;
-      oModel.setProperty("/CurrentInvoice/SelectedBlobIndex", 0);
-      oModel.setProperty("/CurrentInvoice/PdfSource", oFirst?.pdfLink || "");
-      oModel.setProperty("/CurrentInvoice/PdfPreviewUrl", oFirst?.previewLink || "");
+        // Falls schon ein Item selektiert war: versuche das beizubehalten
+        const iOldIndex = oModel.getProperty("/CurrentInvoice/SelectedBlobIndex");
+        const sOldId = (Number.isInteger(iOldIndex) && aPdfItems[iOldIndex])
+            ? aPdfItems[iOldIndex].id
+            : null;
+
+        let iNewIndex = 0;
+
+        if (sOldId) {
+            const idx = aPdfItems.findIndex(x => x.id === sOldId);
+            if (idx >= 0) {
+                iNewIndex = idx;
+            }
+        } else if (Number.isInteger(iOldIndex) && iOldIndex >= 0 && iOldIndex < aPdfItems.length) {
+            // Index war gültig -> behalten
+            iNewIndex = iOldIndex;
+        }
+
+        oModel.setProperty("/CurrentInvoice/SelectedBlobIndex", iNewIndex);
+
+        const oSel = aPdfItems[iNewIndex] || null;
+        oModel.setProperty("/CurrentInvoice/PdfSource", oSel?.pdfLink || "");
+        oModel.setProperty("/CurrentInvoice/PdfPreviewUrl", oSel?.previewLink || "");
     },
+
 
     // PDF: Popup öffnen (wie UI5 Sample)
     onPdfPress: function (oController) {
