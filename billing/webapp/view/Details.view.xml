@@ -90,14 +90,26 @@
                                     valueHelpIconSrc="sap-icon://add-document"
                                     valueHelpRequest=".onBrowseInvoice" />
 
-                                <List
-                                    items="{backend>/CurrentInvoice/InvoiceBlobs}"
-                                    itemPress=".onBlobOpen">
-                                    <StandardListItem
-                                        title="{backend>FileName}"
-                                        description="{backend>MimeType}"
-                                        type="Active" />
-                                </List>
+                            <List
+                                items="{backend>/CurrentInvoice/InvoiceBlobs}"
+                                itemPress=".onBlobOpen">
+
+                                <CustomListItem type="Active">
+                                    <HBox width="100%" alignItems="Center" justifyContent="SpaceBetween">
+                                        <VBox class="sapUiTinyMarginEnd">
+                                            <Text text="{backend>FileName}" wrapping="false"/>
+                                            <Text text="{backend>MimeType}" wrapping="false" class="sapUiTinyMarginTop"/>
+                                        </VBox>
+
+                                        <Button
+                                            icon="sap-icon://delete"
+                                            type="Transparent"
+                                            tooltip="Delete Attachment"
+                                            press=".onDeleteBlob"
+                                            class="sapUiTinyMarginBegin"/>
+                                    </HBox>
+                                </CustomListItem>
+                            </List>
 
                                 <!-- Unsichtbarer Uploader für Invoices-->
                                 <unified:FileUploader
@@ -119,14 +131,26 @@
                                     valueHelpOnly="true"
                                     valueHelpIconSrc="sap-icon://add-document"
                                     valueHelpRequest=".onBrowseAttachments" />
-                                <List
-                                    items="{backend>/CurrentInvoice/AttachmentBlobs}"
-                                    itemPress=".onBlobOpen">
-                                    <StandardListItem
-                                        title="{backend>FileName}"
-                                        description="{backend>MimeType}"
-                                        type="Active" />
-                                </List>
+                            <List
+                                items="{backend>/CurrentInvoice/AttachmentBlobs}"
+                                itemPress=".onBlobOpen">
+
+                                <CustomListItem type="Active">
+                                    <HBox width="100%" alignItems="Center" justifyContent="SpaceBetween">
+                                        <VBox class="sapUiTinyMarginEnd">
+                                            <Text text="{backend>FileName}" wrapping="false"/>
+                                            <Text text="{backend>MimeType}" wrapping="false" class="sapUiTinyMarginTop"/>
+                                        </VBox>
+
+                                        <Button
+                                            icon="sap-icon://delete"
+                                            type="Transparent"
+                                            tooltip="Delete Attachment"
+                                            press=".onDeleteBlob"
+                                            class="sapUiTinyMarginBegin"/>
+                                    </HBox>
+                                </CustomListItem>
+                            </List>
 
                                 <!-- Unsichtbarer Uploader für Anhänge -->
                                 <unified:FileUploader

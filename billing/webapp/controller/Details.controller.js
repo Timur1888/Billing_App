@@ -164,6 +164,34 @@ sap.ui.define([
     return await r.json();
     },
 
+    onDeleteBlob: async function (oEvent) {
+        const oCtx  = oEvent.getSource().getBindingContext("backend");
+        const oBlob = oCtx?.getObject();
+        const sBlobId = oBlob?.Id;
+
+        if (!sBlobId) return;
+
+        try {
+            this.getView().setBusy(true);
+
+            const oResp = await this._postRemoveBlobs([sBlobId]);
+
+            const oBackendModel = this.getOwnerComponent().getModel("backend");
+            if (oResp?.value) {
+                oBackendModel.setProperty("/CurrentInvoice/MetaData/Blobs", oResp.value);
+            } else {
+                const a = oBackendModel.getProperty("/CurrentInvoice/MetaData/Blobs") || [];
+                oBackendModel.setProperty("/CurrentInvoice/MetaData/Blobs", a.filter(b => b?.Id !== sBlobId));
+            }
+
+            this._rebuildLists();
+        } catch (e) {
+            console.error("Delete Blob Fehler:", e);
+        } finally {
+            this.getView().setBusy(false);
+        }
+    },
+
     _rebuildLists: function () {
     const oModel = this.getOwnerComponent().getModel("backend");
     const aBlobs = oModel.getProperty("/CurrentInvoice/MetaData/Blobs") || [];
@@ -324,14 +352,48 @@ sap.ui.define([
     },
 
     onBlobOpen: function (oEvent) {
-        const oItem = oEvent.getParameter("listItem") || oEvent.getSource();
+        const oSrc = oEvent.getParameter("srcControl");
+        if (oSrc && oSrc.isA && oSrc.isA("sap.m.Button")) {
+            return; // Button-Klick -> kein Open
+        }
+
+        const oItem = oEvent.getParameter("listItem");
         const oCtx  = oItem.getBindingContext("backend");
-        const oBlob = oCtx && oCtx.getObject();
+        const oBlob = oCtx.getObject();
 
-        const sUrl = oBlob?.Link;
-        if (!sUrl) { return; }
+        if (!oBlob?.Link) { return; }
+        this._openPdfPopup(oBlob.Link, oBlob.FileName || "Document");
+    },
 
-        this._openPdfPopup(sUrl, oBlob?.FileName || "Document");
+    _postRemoveBlobs: async function (aBlobIds) {
+    const sDocId = this._getCurrentDocumentId();
+    if (!sDocId) throw new Error("Keine CurrentInvoice/Id gefunden.");
+
+    const oAuth = this.getOwnerComponent().getModel("auth");
+    const sType = oAuth?.getProperty("/tokenType");
+    const sTok  = oAuth?.getProperty("/token");
+    if (!sType || !sTok) throw new Error("Kein Token im auth-Model gefunden.");
+
+    const sUrl =
+        `https://test.app.clarc.com:443/application/api/v1/documenthub/document(${encodeURIComponent(sDocId)})/removeblobs`;
+
+    const r = await fetch(sUrl, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+        "Content-Type": "application/json",
+        "Authorization": `${sType} ${sTok}`
+        },
+        body: JSON.stringify({
+        Blobs: aBlobIds // 
+        })
+    });
+
+    if (!r.ok) {
+        const t = await r.text().catch(() => "");
+        throw new Error(`removeblobs failed (${r.status}): ${t}`);
+    }
+    return await r.json();
     },
 
     _openPdfPopup: function (sUrl, sTitle) {
@@ -343,5 +405,6 @@ sap.ui.define([
         // (Wenn du DisplayType gesetzt hast: hier NICHT "Popup" als String, sondern Enum)
         this._oPdfViewer.open();
     },
+
     });
 });
