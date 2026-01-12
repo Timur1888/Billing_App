@@ -39,6 +39,14 @@ sap.ui.define([
 
             const oRouter = UIComponent.getRouterFor(this);
             oRouter.getRoute("DetailsRoute").attachPatternMatched(this._onRouteMatched, this);
+
+            //immer unten lassen, damit werden die Items für die Bilder klickbar
+            this.byId("uploadSetInvoice")?.addEventDelegate({
+            onAfterRendering: () => this._wireUploadSetItemPress("uploadSetInvoice")
+            });
+            this.byId("uploadSetAttachments")?.addEventDelegate({
+            onAfterRendering: () => this._wireUploadSetItemPress("uploadSetAttachments")
+            });
         },
 
   //---------------------------------------------------------------------------------------------------Edit Templates----------------------------------------------------------------
@@ -375,6 +383,9 @@ _persistUploadSetItems: async function (aItems, sBlobType, sUploadSetId) {
     } finally {
         this.getView().setBusy(false);
     }
+
+    this._wireUploadSetItemPress("uploadSetInvoice");
+    this._wireUploadSetItemPress("uploadSetAttachments");
 },
 
     _postRemoveBlobs: async function (aBlobIds) {
@@ -439,6 +450,79 @@ _persistUploadSetItems: async function (aItems, sBlobType, sUploadSetId) {
 
         return aMerged;
     },
+
+    _wireUploadSetItemPress: function (sUploadSetId) {
+  const oUS = this.byId(sUploadSetId);
+  if (!oUS) { return; }
+
+  oUS.getItems().forEach((oUSItem) => {
+    const oListItem = oUSItem.getListItem && oUSItem.getListItem();
+    if (!oListItem) { return; }
+
+    // nur einmal verdrahten
+    if (oListItem.data("__wiredPress")) { return; }
+    oListItem.data("__wiredPress", true);
+
+    // Klickbar machen
+    if (oListItem.setType) {
+      oListItem.setType("Active");
+    }
+
+    // press handler
+    oListItem.attachPress(() => {
+      this._openUploadSetItem(oUSItem);
+    });
+  });
+},
+
+_openUploadSetItem: function (oUSItem) {
+  // Daten aus Backend-Binding holen
+  const oCtx = oUSItem.getBindingContext && oUSItem.getBindingContext("backend");
+  const oObj = oCtx && oCtx.getObject ? oCtx.getObject() : null;
+
+  // URL: bei dir ist im XML url="{backend>DownloadUrl}"
+  const sUrl = oObj?.DownloadUrl || oObj?.Link || oUSItem.getUrl?.() || "";
+  const sName = oObj?.FileName || oUSItem.getFileName?.() || "File";
+  const sMime = oObj?.MimeType || oUSItem.getMediaType?.() || "";
+
+  if (!sUrl) {
+    console.warn("Keine URL zum Öffnen gefunden");
+    return;
+  }
+
+  const bIsPdf = sMime === "application/pdf" || sName.toLowerCase().endsWith(".pdf");
+  const bIsImg = (sMime || "").startsWith("image/") || /\.(png|jpe?g)$/i.test(sName);
+
+  if (bIsPdf) {
+    this._oPdfViewer.setSource(sUrl);
+    this._oPdfViewer.setTitle(sName);
+    this._oPdfViewer.open();
+    return;
+  }
+
+  if (bIsImg) {
+    if (!this._oImageDialog) {
+      this._oImageDialog = new sap.m.Dialog({
+        title: "Image",
+        stretch: true,
+        content: [ new sap.m.Image({ width: "100%", densityAware: false }) ],
+        beginButton: new sap.m.Button({
+          text: "Close",
+          press: () => this._oImageDialog.close()
+        })
+      });
+      this.getView().addDependent(this._oImageDialog);
+    }
+
+    this._oImageDialog.setTitle(sName);
+    this._oImageDialog.getContent()[0].setSrc(sUrl);
+    this._oImageDialog.open();
+    return;
+  }
+
+  window.open(sUrl, "_blank", "noopener");
+},
+
 
 
     });
