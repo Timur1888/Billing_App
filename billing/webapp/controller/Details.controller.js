@@ -113,7 +113,7 @@ sap.ui.define([
         this._rebuildLists();
     },
 
-    //---------------------------------------------------------------------------------------------------PDF abzeigen----------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------------PDF anzeigen----------------------------------------------------------------
         _preparePdfSourceFromInvoice: function (oInvoice) {
         return Details_PDFViewHelper.preparePdfSourceFromInvoice(this, oInvoice);
         },
@@ -121,6 +121,10 @@ sap.ui.define([
         onPdfPress: function () {
         return Details_PDFViewHelper.onPdfPress(this);
         },
+        onFilePress: function () {
+        return Details_PDFViewHelper.onFilePress(this);
+        },
+
 
         onBlobPageChanged: function (oEvent) {
         return Details_PDFViewHelper.onBlobPageChanged(this, oEvent);
@@ -373,7 +377,6 @@ _persistUploadSetItems: async function (aItems, sBlobType, sUploadSetId) {
     }
 },
 
-
     _postRemoveBlobs: async function (aBlobIds) {
     const sDocId = this._getCurrentDocumentId();
     if (!sDocId) throw new Error("Keine CurrentInvoice/Id gefunden.");
@@ -403,16 +406,6 @@ _persistUploadSetItems: async function (aItems, sBlobType, sUploadSetId) {
         throw new Error(`removeblobs failed (${r.status}): ${t}`);
     }
     return await r.json();
-    },
-
-    _openPdfPopup: function (sUrl, sTitle) {
-        // Viewer existiert schon aus onInit()
-        this._oPdfViewer.setSource(sUrl);
-        this._oPdfViewer.setTitle(sTitle);
-
-        // Popup (wie Sample)
-        // (Wenn du DisplayType gesetzt hast: hier NICHT "Popup" als String, sondern Enum)
-        this._oPdfViewer.open();
     },
 
     _mergeBlobsKeepOrder: function (aOld, aFromResp) {

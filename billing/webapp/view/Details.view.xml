@@ -15,22 +15,41 @@
                      PDF direkt im Panel + Klick öffnet Popup
                      ========================================== -->
                   <VBox class="sapUiSmallMargin">
-                     <Title text="Invoice PDF" level="H3" class="sapUiTinyMarginBottom" />
-                     <Carousel id="blobCarousel" class="sapUiContentPadding pdfCarousel" loop="false" pageChanged=".onBlobPageChanged" pages="{backend&gt;/CurrentInvoice/BlobItems}">
-                        <pages>
-                           <!-- Template für eine Carousel-Seite -->
-                           <VBox width="100%" class="pdfPageScroll">
-                              <!-- Preview vorhanden -->
-                              <Image src="{backend&gt;previewLink}" alt="{backend&gt;fileName}" width="100%" decorative="false" densityAware="false" press=".onPdfPress" visible="{= !!${backend&gt;previewLink} }" />
-                              <!-- Keine Preview -> Placeholder -->
-                              <VBox width="100%" class="pdfPageScroll" alignItems="Center" justifyContent="Center" visible="{= !${backend&gt;previewLink} }">
-                                 <core:Icon src="sap-icon://pdf-attachment" size="4rem" />
-                                 <Text text="{backend&gt;fileName}" class="sapUiSmallMarginTop" />
-                                 <Link text="Open PDF" press=".onPdfPress" class="sapUiSmallMarginTop" />
-                              </VBox>
-                           </VBox>
-                        </pages>
-                     </Carousel>
+                     <Title text="Invoice Files" level="H3" class="sapUiTinyMarginBottom"/>
+                    <Carousel
+                        id="blobCarousel"
+                        class="sapUiContentPadding pdfCarousel"
+                        loop="false"
+                        pageChanged=".onBlobPageChanged"
+                        pages="{backend>/CurrentInvoice/BlobItems}">
+                    <pages>
+                        <VBox width="100%" class="pdfPageScroll">
+
+                        <!-- Preview vorhanden (PDF-Preview ODER Bild-Link) -->
+                        <Image
+                            src="{backend>previewLink}"
+                            alt="{backend>fileName}"
+                            width="100%"
+                            decorative="false"
+                            densityAware="false"
+                            press=".onFilePress"
+                            visible="{= !!${backend>previewLink} }" />
+
+                        <!-- Keine Preview -> Placeholder -->
+                        <VBox
+                            width="100%"
+                            class="pdfPageScroll"
+                            alignItems="Center"
+                            justifyContent="Center"
+                            visible="{= !${backend>previewLink} }">
+                            <core:Icon src="{backend>icon}" size="4rem" />
+                            <Text text="{backend>fileName}" class="sapUiSmallMarginTop"/>
+                            <Link text="{backend>openText}" press=".onFilePress" class="sapUiSmallMarginTop"/>
+                        </VBox>
+
+                        </VBox>
+                    </pages>
+                    </Carousel>
                   </VBox>
                   <VBox width="100%" class="sapUiSmallMargin">
                      <!-- Invoice File -->
