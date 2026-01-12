@@ -142,6 +142,27 @@ sap.ui.define([
         return Details_PDFViewHelper.onClose(this);
         },
 
+        //Preview im Panel updaten
+        _refreshPreviewPanel: function () {
+            const oModel = this.getOwnerComponent().getModel("backend");
+            const oInvoice = oModel.getProperty("/CurrentInvoice");
+            if (!oInvoice) { return; }
+
+            // BlobItems (PDF + Images) im Carousel neu aufbauen
+            this._preparePdfSourceFromInvoice(oInvoice);
+
+            // Carousel einmal „anstoßen“, falls Binding nicht sofort redrawt
+            const oCarousel = this.byId("blobCarousel");
+            if (oCarousel) {
+                const oBind = oCarousel.getBinding("pages");
+                if (oBind && oBind.refresh) {
+                    oBind.refresh(true);
+                }
+                oCarousel.invalidate(); // sorgt zuverlässig fürs Re-Render
+            }
+        },
+
+
     //---------------------------------------------------------------------------------------------------Uploader----------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------
 // UploadSet (Invoice) - sofort speichern bei Drop/Select
@@ -263,6 +284,7 @@ onAttachmentItemAdded: async function (oEvent) {
         const aBlobs = oModel.getProperty("/CurrentInvoice/MetaData/Blobs") || [];
         oModel.setProperty("/CurrentInvoice/InvoiceBlobs", aBlobs.filter(b => b?.Type === "ccBT_Invoice"));
         oModel.setProperty("/CurrentInvoice/AttachmentBlobs", aBlobs.filter(b => b?.Type !== "ccBT_Invoice"));
+        this._refreshPreviewPanel();
     },
 
     _getCurrentDocumentId: function () {
