@@ -131,6 +131,33 @@ sap.ui.define([
         },
 
     //---------------------------------------------------------------------------------------------------Uploader----------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------
+// UploadSet (Invoice) - sofort speichern bei Drop/Select
+// ---------------------------------------------------------------------------------------------------
+onInvoiceItemAdded: async function (oEvent) {
+    const oItem = oEvent.getParameter("item"); // sap.m.upload.UploadSetItem
+    if (!oItem) { return; }
+
+    try {
+        await this._persistUploadSetItems([oItem], "ccBT_Invoice", "uploadSetInvoice");
+    } catch (e) {
+        console.error("Invoice afterItemAdded Fehler:", e);
+    }
+},
+
+// ---------------------------------------------------------------------------------------------------
+// UploadSet (Attachments) - sofort speichern bei Drop/Select
+// ---------------------------------------------------------------------------------------------------
+onAttachmentItemAdded: async function (oEvent) {
+    const oItem = oEvent.getParameter("item");
+    if (!oItem) { return; }
+
+    try {
+        await this._persistUploadSetItems([oItem], "ccBT_Attachment", "uploadSetAttachments");
+    } catch (e) {
+        console.error("Attachment afterItemAdded Fehler:", e);
+    }
+}, 
     _postAppendBlobs: async function (aBlobPayload) {
     const sDocId = this._getCurrentDocumentId();
     if (!sDocId) throw new Error("Keine CurrentInvoice/Id gefunden.");
@@ -164,12 +191,39 @@ sap.ui.define([
     return await r.json();
     },
 
-    onDeleteBlob: async function (oEvent) {
-        const oCtx  = oEvent.getSource().getBindingContext("backend");
-        const oBlob = oCtx?.getObject();
+    // ---------------------------------------------------------------------------------------------------
+    // Delete über UploadSet (nachdem User "Remove" bestätigt hat)
+    // -> bei bereits persistierten Dateien: Backend removeblobs
+    // -> bei noch nicht persistierten (pending): nur aus UI entfernen
+    // ---------------------------------------------------------------------------------------------------
+    onAfterInvoiceItemRemoved: async function (oEvent) {
+        await this._handleUploadSetItemRemoved(oEvent, "uploadSetInvoice");
+    },
+
+    onAfterAttachmentItemRemoved: async function (oEvent) {
+        await this._handleUploadSetItemRemoved(oEvent, "uploadSetAttachments");
+    },
+
+    _handleUploadSetItemRemoved: async function (oEvent, sUploadSetId) {
+        const oUS = this.byId(sUploadSetId);
+        const oItem = oEvent.getParameter("item");
+        if (!oItem) { return; }
+
+        // Fall 1: Item kommt aus Backend-Binding (persistiert)
+        const oCtx = oItem.getBindingContext && oItem.getBindingContext("backend");
+        const oBlob = oCtx && oCtx.getObject ? oCtx.getObject() : null;
         const sBlobId = oBlob?.Id;
 
-        if (!sBlobId) return;
+        // Fall 2: Pending item (noch nicht persistiert) -> nichts ins Backend senden
+        if (!sBlobId) {
+            // falls UI5 es nicht selbst aus incompleteItems entfernt hat:
+            try {
+                if (oUS && oUS.removeIncompleteItem) {
+                    oUS.removeIncompleteItem(oItem);
+                }
+            } catch (e) { /* ignore */ }
+            return;
+        }
 
         try {
             this.getView().setBusy(true);
@@ -186,7 +240,7 @@ sap.ui.define([
 
             this._rebuildLists();
         } catch (e) {
-            console.error("Delete Blob Fehler:", e);
+            console.error("UploadSet Remove Fehler:", e);
         } finally {
             this.getView().setBusy(false);
         }
@@ -241,135 +295,84 @@ sap.ui.define([
         }
     },
 
-    onInvoiceChange: async function (oEvent) {
-        const aFiles = oEvent.getParameter("files") || [];
-        if (!aFiles.length) { return; }
+// ---------------------------------------------------------------------------------------------------
+// Gemeinsame Persistenz für UploadSet-Items (Base64 -> appendblobs)
+// - nutzt DEINE bestehende Backend-Logik
+// - wichtig: danach pending/incomplete Items entfernen, damit keine Duplikate in der Liste bleiben
+// ---------------------------------------------------------------------------------------------------
+_persistUploadSetItems: async function (aItems, sBlobType, sUploadSetId) {
+    if (!Array.isArray(aItems) || !aItems.length) { return; }
 
-        const oFile = aFiles[0];
-        const oBackendModel = this.getOwnerComponent().getModel("backend");
+    const oUS = this.byId(sUploadSetId);
+    const oBackendModel = this.getOwnerComponent().getModel("backend");
 
-        try {
-            this.getView().setBusy(true);
+    try {
+        this.getView().setBusy(true);
+
+        const aPayload = [];
+
+        for (const oItem of aItems) {
+            // Nur überspringen, wenn es wirklich ein persistierter Blob aus dem Backend ist
+            const oCtx = oItem.getBindingContext && oItem.getBindingContext("backend");
+            const oObj = oCtx && oCtx.getObject ? oCtx.getObject() : null;
+
+            // "Blob-Check": hat Id UND FileName (oder MimeType) => dann ist es ein Backend-Blob
+            const bIsBackendBlob = !!(oObj && oObj.Id && (oObj.FileName || oObj.MimeType));
+
+            if (bIsBackendBlob) {
+                continue; // schon persistiert -> nichts mehr tun
+            }
+
+            // File holen (bei neu hinzugefügten Items vorhanden)
+            const oFile =
+                (oItem.getFileObject && oItem.getFileObject()) ||
+                oItem._oFileObject; // fallback, je nach UI5-Version
+
+            if (!oFile) {
+                // Wenn kein FileObject da ist, kann man nichts Base64-en
+                continue;
+            }
 
             const sB64 = await this._fileToBase64(oFile);
 
-            const aPayload = [{
+            aPayload.push({
                 FileName: oFile.name,
                 MimeType: oFile.type || "application/octet-stream",
                 Name: oFile.name,
                 SortId: 0,
-                Type: "ccBT_Invoice",
+                Type: sBlobType,
                 Upload: {
                     GenerateViewBlob: "ccVG_Instant",
                     BlobId: "",
                     BlobData: sB64
                 }
-            }];
+            });
+        }
 
-            const oResp = await this._postAppendBlobs(aPayload);
+        if (!aPayload.length) { return; }
 
-            // ✅ Backend-Model updaten -> Liste aktualisieren
-            if (oResp?.value) {
-                const aOld = oBackendModel.getProperty("/CurrentInvoice/MetaData/Blobs") || [];
-                const aNew = this._mergeBlobsKeepOrder(aOld, oResp.value);
+        const oResp = await this._postAppendBlobs(aPayload);
 
-                oBackendModel.setProperty("/CurrentInvoice/MetaData/Blobs", aNew);
-                this._rebuildLists();
+        if (oResp?.value) {
+            const aOld = oBackendModel.getProperty("/CurrentInvoice/MetaData/Blobs") || [];
+            const aNew = this._mergeBlobsKeepOrder(aOld, oResp.value);
+
+            oBackendModel.setProperty("/CurrentInvoice/MetaData/Blobs", aNew);
+            this._rebuildLists();
+        }
+
+        // Pending Items aus UploadSet entfernen, sonst bleiben sie zusätzlich zur gebundenen Liste stehen
+        if (oUS && oUS.removeIncompleteItem) {
+            for (const oItem of aItems) {
+                try { oUS.removeIncompleteItem(oItem); } catch (e) { /* ignore */ }
             }
-
-            // optional: FileUploader resetten, damit gleicher File nochmal gewählt werden kann
-            const oUploader = this.byId("invoiceUploader");
-            if (oUploader) { oUploader.clear(); }
-
-        } catch (e) {
-            console.error("Invoice Upload Fehler:", e);
-        } finally {
-            this.getView().setBusy(false);
-        }
-    },
-
-    onBrowseAttachments: function () {
-        var oUploader = this.byId("attachmentsUploader");
-        if (!oUploader) {
-            console.error("attachmentsUploader nicht gefunden");
-            return;
         }
 
-        if (oUploader.openFileDialog) {
-            oUploader.openFileDialog();
-        } else {
-            setTimeout(function () {
-                var oDomRef = oUploader.getDomRef();
-                if (!oDomRef) { return; }
+    } finally {
+        this.getView().setBusy(false);
+    }
+},
 
-                var oFileInput = oDomRef.querySelector("input[type='file']");
-                if (oFileInput) {
-                    oFileInput.click();
-                }
-            }, 0);
-        }
-    },
-
-    onAttachmentsChange: async function (oEvent) {
-        const aFiles = oEvent.getParameter("files") || [];
-        if (!aFiles.length) { return; }
-
-        const oBackendModel = this.getOwnerComponent().getModel("backend");
-
-        try {
-            this.getView().setBusy(true);
-
-            const aPayload = [];
-            for (const oFile of aFiles) {
-                const sB64 = await this._fileToBase64(oFile);
-
-                aPayload.push({
-                    FileName: oFile.name,
-                    MimeType: oFile.type || "application/octet-stream",
-                    Name: oFile.name,
-                    SortId: 0,
-                    Type: "ccBT_Attachment", // falls euer Backend anderes erwartet -> anpassen
-                    Upload: {
-                        GenerateViewBlob: "ccVG_Instant",
-                        BlobId: "",
-                        BlobData: sB64
-                    }
-                });
-            }
-
-            const oResp = await this._postAppendBlobs(aPayload);
-
-            if (oResp?.value) {
-                const aOld = oBackendModel.getProperty("/CurrentInvoice/MetaData/Blobs") || [];
-                const aNew = this._mergeBlobsKeepOrder(aOld, oResp.value);
-
-                oBackendModel.setProperty("/CurrentInvoice/MetaData/Blobs", aNew);
-                this._rebuildLists();
-            }
-
-            const oUploader = this.byId("attachmentsUploader");
-            if (oUploader) { oUploader.clear(); }
-
-        } catch (e) {
-            console.error("Attachments Upload Fehler:", e);
-        } finally {
-            this.getView().setBusy(false);
-        }
-    },
-
-    onBlobOpen: function (oEvent) {
-        const oSrc = oEvent.getParameter("srcControl");
-        if (oSrc && oSrc.isA && oSrc.isA("sap.m.Button")) {
-            return; // Button-Klick -> kein Open
-        }
-
-        const oItem = oEvent.getParameter("listItem");
-        const oCtx  = oItem.getBindingContext("backend");
-        const oBlob = oCtx.getObject();
-
-        if (!oBlob?.Link) { return; }
-        this._openPdfPopup(oBlob.Link, oBlob.FileName || "Document");
-    },
 
     _postRemoveBlobs: async function (aBlobIds) {
     const sDocId = this._getCurrentDocumentId();

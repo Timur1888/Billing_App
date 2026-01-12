@@ -1,240 +1,108 @@
-<mvc:View
-    controllerName="billing.controller.Details"
-    xmlns:mvc="sap.ui.core.mvc"
-    xmlns="sap.m"
-    xmlns:core="sap.ui.core"
-    xmlns:unified="sap.ui.unified">
-
-    <Page title="Panel Title" showFooter="true">
-        <!-- X-Schließen-Button rechts oben -->
-        <headerContent>
-            <Button
-                id="btnClose"
-                icon="sap-icon://decline"
-                type="Transparent"
-                tooltip="Close"
-                press=".onClose"
-                class="detailCloseBtn"/>
-        </headerContent>
-
-        <content>
-            <!-- Tabs: Overview / History -->
-            <IconTabBar
-                id="itbDetails"
-                expanded="true"
-                upperCase="false"
-                selectedKey="overview">
-
-                <items>
-
-                    <!-- ================== OVERVIEW TAB ================== -->
-                    <IconTabFilter key="overview" text="Overview">
-                            <!-- ==========================================
-                            PDF direkt im Panel + Klick öffnet Popup
-                            ========================================== -->
-<VBox class="sapUiSmallMargin">
-<Title text="Invoice PDF" level="H3" class="sapUiTinyMarginBottom"/>
-
-<Carousel
-    id="blobCarousel"
-    class="sapUiContentPadding pdfCarousel"
-    loop="false"
-    pageChanged=".onBlobPageChanged"
-    pages="{backend>/CurrentInvoice/BlobItems}">
-
-    <pages>
-        <!-- Template für eine Carousel-Seite -->
-        <VBox width="100%" class="pdfPageScroll">
-
-            <!-- Preview vorhanden -->
-            <Image
-                src="{backend>previewLink}"
-                alt="{backend>fileName}"
-                width="100%"
-                decorative="false"
-                densityAware="false"
-                press=".onPdfPress"
-                visible="{= !!${backend>previewLink} }" />
-
-            <!-- Keine Preview -> Placeholder -->
-            <VBox
-                width="100%"
-                class="pdfPageScroll"
-                alignItems="Center"
-                justifyContent="Center"
-                visible="{= !${backend>previewLink} }">
-
-                <core:Icon src="sap-icon://pdf-attachment" size="4rem" />
-                <Text text="{backend>fileName}" class="sapUiSmallMarginTop"/>
-                <Link text="Open PDF" press=".onPdfPress" class="sapUiSmallMarginTop"/>
-            </VBox>
-
-        </VBox>
-    </pages>
-</Carousel>
-
-
-
-</VBox>
-                        <VBox
-                            width="100%"
-                            class="sapUiSmallMargin">
-                            <!-- Invoice File -->
-                            <VBox class="sapUiSmallMarginTop" width="97%">
-                                <!-- Upload (Invoice) -->
-                                <Title text="Upload (Invoice)" level="H4"/>
-                                <Input
-                                    placeholder="Browse or drop a invoice file"
-                                    showValueHelp="true"
-                                    valueHelpOnly="true"
-                                    valueHelpIconSrc="sap-icon://add-document"
-                                    valueHelpRequest=".onBrowseInvoice" />
-
-                            <List
-                                items="{backend>/CurrentInvoice/InvoiceBlobs}"
-                                itemPress=".onBlobOpen">
-
-                                <CustomListItem type="Active">
-                                    <HBox width="100%" alignItems="Center" justifyContent="SpaceBetween">
-                                        <VBox class="sapUiTinyMarginEnd">
-                                            <Text text="{backend>FileName}" wrapping="false"/>
-                                            <Text text="{backend>MimeType}" wrapping="false" class="sapUiTinyMarginTop"/>
-                                        </VBox>
-
-                                        <Button
-                                            icon="sap-icon://delete"
-                                            type="Transparent"
-                                            tooltip="Delete Attachment"
-                                            press=".onDeleteBlob"
-                                            class="sapUiTinyMarginBegin"/>
-                                    </HBox>
-                                </CustomListItem>
-                            </List>
-
-                                <!-- Unsichtbarer Uploader für Invoices-->
-                                <unified:FileUploader
-                                    id="invoiceUploader"
-                                    class="hiddenFileUploader"
-                                    multiple="false"
-                                    change=".onInvoiceChange"
-                                    uploadOnChange="false" />
-                            </VBox>
-
-                            <!-- Attachments -->
-
-                            <VBox class="sapUiSmallMarginTop" width="97%">
-                            <!-- Upload (Attachments) -->
-                            <Title text="Upload (Attachments)" level="H4"/>
-                                <Input
-                                    placeholder="Browse or drop attachments"
-                                    showValueHelp="true"
-                                    valueHelpOnly="true"
-                                    valueHelpIconSrc="sap-icon://add-document"
-                                    valueHelpRequest=".onBrowseAttachments" />
-                            <List
-                                items="{backend>/CurrentInvoice/AttachmentBlobs}"
-                                itemPress=".onBlobOpen">
-
-                                <CustomListItem type="Active">
-                                    <HBox width="100%" alignItems="Center" justifyContent="SpaceBetween">
-                                        <VBox class="sapUiTinyMarginEnd">
-                                            <Text text="{backend>FileName}" wrapping="false"/>
-                                            <Text text="{backend>MimeType}" wrapping="false" class="sapUiTinyMarginTop"/>
-                                        </VBox>
-
-                                        <Button
-                                            icon="sap-icon://delete"
-                                            type="Transparent"
-                                            tooltip="Delete Attachment"
-                                            press=".onDeleteBlob"
-                                            class="sapUiTinyMarginBegin"/>
-                                    </HBox>
-                                </CustomListItem>
-                            </List>
-
-                                <!-- Unsichtbarer Uploader für Anhänge -->
-                                <unified:FileUploader
-                                    id="attachmentsUploader"
-                                    class="hiddenFileUploader"
-                                    multiple="true"
-                                    change=".onAttachmentsChange"
-                                    uploadOnChange="false" />
-                            </VBox>
-
-                            <!-- Output -->
-                            <Title text="Output" level="H4" class="sapUiMediumMarginTop"/>
-
-                            <VBox class="sapUiSmallMarginTop" width="97%">
-
-                                <Select width="100%" class="sapUiSmallMarginBottom">
-                                    <items>
-                                        <core:Item key="transF" text="Transfer Format"/>
-                                        <core:Item key="fx" text="Factur-X"/>
-                                        <core:Item key="pdf" text="PDF"/>
-                                    </items>
-                                </Select>
-
-                                <Select width="100%" class="sapUiSmallMarginBottom">
-                                    <items>
-                                        <core:Item key="delMeth" text="Delivery Method"/>
-                                        <core:Item key="email" text="Email"/>
-                                        <core:Item key="post" text="Postal Service"/>
-                                    </items>
-                                </Select>
-
-                                <Input placeholder="Receiver" class="sapUiSmallMarginBottom"/>
-                                <Input placeholder="CC" class="sapUiSmallMarginBottom"/>
-                                <Input placeholder="BCC" class="sapUiSmallMarginBottom"/>
-                            </VBox>
-
-                            <!-- Job Settings -->
-                            <Title text="Job Settings" level="H4" class="sapUiMediumMarginTop"/>
-
-                            <HBox class="sapUiSmallMarginTop" alignItems="Center">
-                                <Switch
-                                    state="true"
-                                    customTextOn=""
-                                    customTextOff=""
-                                    class="sapUiTinyMarginEnd"/>
-                                <Text text="Manual Dispatch"/>
-                            </HBox>
-
-                            <!-- Templates -->
-                            <Title text="Templates" level="H4" class="sapUiMediumMarginTop"/>
-
-                            <VBox class="sapUiSmallMarginTop">
-                                <Label text="Subject"/>
-
-                                <Button
-                                    text="Edit"
-                                    type="Emphasized"
-                                    class="sapUiTinyMarginTop"
-                                    width="3rem"
-                                    press=".onEditTemplate"/>
-                            </VBox>
-
-                        </VBox>
-                    </IconTabFilter>
-
-                    <!-- ================== HISTORY TAB ================== -->
-                    <IconTabFilter key="history" text="History">
-                        <VBox class="sapUiSmallMargin">
-                            <Text text="History-Inhalt kommt später hier hin..."/>
-                        </VBox>
-                    </IconTabFilter>
-
-                </items>
-            </IconTabBar>
-        </content>
-
-        <!-- Footer mit Save / Send -->
-        <footer>
-            <Toolbar>
-                <ToolbarSpacer/>
-                <Button text="Save" type="Transparent"/>
-                <Button text="Send" type="Emphasized" class="sendButton"/>
-            </Toolbar>
-        </footer>
-
-    </Page>
+<?xml version="1.0" encoding="UTF-8"?>
+<mvc:View xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:core="sap.ui.core" xmlns:unified="sap.ui.unified" xmlns:upload="sap.m.upload" controllerName="billing.controller.Details">
+   <Page title="Panel Title" showFooter="true">
+      <!-- X-Schließen-Button rechts oben -->
+      <headerContent>
+         <Button id="btnClose" icon="sap-icon://decline" type="Transparent" tooltip="Close" press=".onClose" class="detailCloseBtn" />
+      </headerContent>
+      <content>
+         <!-- Tabs: Overview / History -->
+         <IconTabBar id="itbDetails" expanded="true" upperCase="false" selectedKey="overview">
+            <items>
+               <!-- ================== OVERVIEW TAB ================== -->
+               <IconTabFilter key="overview" text="Overview">
+                  <!-- ==========================================
+                     PDF direkt im Panel + Klick öffnet Popup
+                     ========================================== -->
+                  <VBox class="sapUiSmallMargin">
+                     <Title text="Invoice PDF" level="H3" class="sapUiTinyMarginBottom" />
+                     <Carousel id="blobCarousel" class="sapUiContentPadding pdfCarousel" loop="false" pageChanged=".onBlobPageChanged" pages="{backend&gt;/CurrentInvoice/BlobItems}">
+                        <pages>
+                           <!-- Template für eine Carousel-Seite -->
+                           <VBox width="100%" class="pdfPageScroll">
+                              <!-- Preview vorhanden -->
+                              <Image src="{backend&gt;previewLink}" alt="{backend&gt;fileName}" width="100%" decorative="false" densityAware="false" press=".onPdfPress" visible="{= !!${backend&gt;previewLink} }" />
+                              <!-- Keine Preview -> Placeholder -->
+                              <VBox width="100%" class="pdfPageScroll" alignItems="Center" justifyContent="Center" visible="{= !${backend&gt;previewLink} }">
+                                 <core:Icon src="sap-icon://pdf-attachment" size="4rem" />
+                                 <Text text="{backend&gt;fileName}" class="sapUiSmallMarginTop" />
+                                 <Link text="Open PDF" press=".onPdfPress" class="sapUiSmallMarginTop" />
+                              </VBox>
+                           </VBox>
+                        </pages>
+                     </Carousel>
+                  </VBox>
+                  <VBox width="100%" class="sapUiSmallMargin">
+                     <!-- Invoice File -->
+                     <VBox class="sapUiSmallMarginTop" width="97%">
+                        <Title text="Upload (Invoice)" level="H4" />
+                        <upload:UploadSet id="uploadSetInvoice" instantUpload="false" uploadEnabled="true" multiple="false" showIcons="true" terminationEnabled="false" fileTypes="pdf" items="{backend&gt;/CurrentInvoice/InvoiceBlobs}" afterItemAdded=".onInvoiceItemAdded" beforeUploadStarts=".onInvoiceBeforeUploadStarts" uploadCompleted=".onInvoiceUploadCompleted" afterItemRemoved=".onAfterInvoiceItemRemoved">
+                           <!-- Wie ein List-Template: -->
+                           <upload:items>
+                              <upload:UploadSetItem fileName="{backend&gt;FileName}" mediaType="{backend&gt;MimeType}" url="{backend&gt;DownloadUrl}" visibleEdit="false" visibleRemove="true" />
+                           </upload:items>
+                        </upload:UploadSet>
+                     </VBox>
+                     <!-- Attachments -->
+                     <VBox class="sapUiSmallMarginTop" width="97%">
+                        <Title text="Upload (Attachments)" level="H4" />
+                        <upload:UploadSet id="uploadSetAttachments" instantUpload="false" uploadEnabled="true" multiple="true" showIcons="true" terminationEnabled="false" items="{backend&gt;/CurrentInvoice/AttachmentBlobs}" afterItemAdded=".onAttachmentItemAdded" beforeUploadStarts=".onAttachmentBeforeUploadStarts" uploadCompleted=".onAttachmentUploadCompleted" afterItemRemoved=".onAfterAttachmentItemRemoved">
+                           <upload:items>
+                              <upload:UploadSetItem fileName="{backend&gt;FileName}" mediaType="{backend&gt;MimeType}" url="{backend&gt;DownloadUrl}" visibleEdit="false" visibleRemove="true" />
+                           </upload:items>
+                        </upload:UploadSet>
+                     </VBox>
+                     <!-- Output -->
+                     <Title text="Output" level="H4" class="sapUiMediumMarginTop" />
+                     <VBox class="sapUiSmallMarginTop" width="97%">
+                        <Select width="100%" class="sapUiSmallMarginBottom">
+                           <items>
+                              <core:Item key="transF" text="Transfer Format" />
+                              <core:Item key="fx" text="Factur-X" />
+                              <core:Item key="pdf" text="PDF" />
+                           </items>
+                        </Select>
+                        <Select width="100%" class="sapUiSmallMarginBottom">
+                           <items>
+                              <core:Item key="delMeth" text="Delivery Method" />
+                              <core:Item key="email" text="Email" />
+                              <core:Item key="post" text="Postal Service" />
+                           </items>
+                        </Select>
+                        <Input placeholder="Receiver" class="sapUiSmallMarginBottom" />
+                        <Input placeholder="CC" class="sapUiSmallMarginBottom" />
+                        <Input placeholder="BCC" class="sapUiSmallMarginBottom" />
+                     </VBox>
+                     <!-- Job Settings -->
+                     <Title text="Job Settings" level="H4" class="sapUiMediumMarginTop" />
+                     <HBox class="sapUiSmallMarginTop" alignItems="Center">
+                        <Switch state="true" customTextOn="" customTextOff="" class="sapUiTinyMarginEnd" />
+                        <Text text="Manual Dispatch" />
+                     </HBox>
+                     <!-- Templates -->
+                     <Title text="Templates" level="H4" class="sapUiMediumMarginTop" />
+                     <VBox class="sapUiSmallMarginTop">
+                        <Label text="Subject" />
+                        <Button text="Edit" type="Emphasized" class="sapUiTinyMarginTop" width="3rem" press=".onEditTemplate" />
+                     </VBox>
+                  </VBox>
+               </IconTabFilter>
+               <!-- ================== HISTORY TAB ================== -->
+               <IconTabFilter key="history" text="History">
+                  <VBox class="sapUiSmallMargin">
+                     <Text text="History-Inhalt kommt später hier hin..." />
+                  </VBox>
+               </IconTabFilter>
+            </items>
+         </IconTabBar>
+      </content>
+      <!-- Footer mit Save / Send -->
+      <footer>
+         <Toolbar>
+            <ToolbarSpacer />
+            <Button text="Save" type="Transparent" />
+            <Button text="Send" type="Emphasized" class="sendButton" />
+         </Toolbar>
+      </footer>
+   </Page>
 </mvc:View>
