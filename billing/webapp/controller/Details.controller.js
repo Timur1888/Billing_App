@@ -10,12 +10,13 @@ sap.ui.define([
 
     return Controller.extend("billing.controller.Details", {
         onInit() {
-            // Upload-Model
-            var oUploadModel = new JSONModel({
-                invoiceFiles: [],
-                attachments: []
-            });
-            this.getView().setModel(oUploadModel, "upload");
+
+            if (!this.getView().getModel("history")) {
+                this.getView().setModel(new sap.ui.model.json.JSONModel({
+                busy: false,
+                logs: []
+                }), "history");
+            }
 
             // Template-Model für Dialog
             var oTemplateModel = new JSONModel({
@@ -49,6 +50,266 @@ sap.ui.define([
             });
         },
 
+        _onRouteMatched: function (oEvent) {
+            const sInvoiceId = oEvent.getParameter("arguments").invoiceId;
+
+            // Layout sicherstellen (falls du mainView im Details auch hast)
+            const oMainViewModel = this.getView().getModel("mainView");
+            if (oMainViewModel) {
+                oMainViewModel.setProperty("/layout", "TwoColumnsBeginExpanded");
+            }
+
+            // ✅ Backend-Model holen (aus Component ist am sichersten)
+            const oModel = this.getOwnerComponent().getModel("backend");
+            if (!oModel) {
+                console.error("Model 'backend' nicht gefunden");
+                return;
+            }
+
+            const aInvoices = oModel.getProperty("/value") || [];
+
+            const oInvoice = aInvoices.find(function (o) {
+                return o?.MetaData?.Object?.Data?.Basics?.Number?.Value === sInvoiceId;
+            });
+
+            if (oInvoice) {
+                // ✅ /CurrentInvoice dynamisch anlegen/überschreiben
+                oModel.setProperty("/CurrentInvoice", oInvoice);
+
+                // ✅ View an /CurrentInvoice binden
+                this.getView().bindElement({
+                    path: "/CurrentInvoice",
+                    model: "backend"
+                });
+
+                this._refreshPreviewPanel();
+
+            } else {
+                    console.warn("Keine Rechnung mit ID", sInvoiceId, "gefunden");
+                }
+            this._rebuildLists();
+        },
+
+        //  Refrescht den Panel den Änderungen zur Laufzeit
+        _refreshPreviewPanel: function () {
+            const oView = this.getView();
+            const oBackend = this.getOwnerComponent().getModel("backend");
+            const oHistory = oView.getModel("history");
+
+            const oInvoice = oBackend.getProperty("/CurrentInvoice");
+            if (!oInvoice || !oHistory) {
+                return;
+            }
+
+            // =====================================================
+            // OVERVIEW: Preview / Carousel aktualisieren
+            // =====================================================
+            this._preparePdfSourceFromInvoice(oInvoice);
+
+            const oCarousel = this.byId("blobCarousel");
+            if (oCarousel) {
+                const oBind = oCarousel.getBinding("pages");
+                if (oBind && oBind.refresh) {
+                    oBind.refresh(true);
+                }
+                oCarousel.invalidate();
+            }
+
+            // =====================================================
+            // HISTORY: Live-Refresh bei Rechnungswechsel
+            // =====================================================
+            const sDocId = this._getCurrentDocumentId();
+            const sLastDocId = oHistory.getProperty("/lastDocId");
+            const sActiveTab = this.byId("itbDetails")?.getSelectedKey?.();
+
+            // Wenn keine DocId → History leeren
+            if (!sDocId) {
+                oHistory.setProperty("/logs", []);
+                oHistory.setProperty("/lastDocId", "");
+                return;
+            }
+
+            // Wenn Rechnung gewechselt hat
+            if (sDocId !== sLastDocId) {
+
+                // Alte Logs sofort entfernen (kein "Ghost History")
+                oHistory.setProperty("/logs", []);
+                oHistory.setProperty("/lastDocId", sDocId);
+
+                // Nur laden, wenn History sichtbar ist
+                if (sActiveTab === "history") {
+                    this._loadHistoryLogs();
+                }
+            }
+        },
+
+
+ //-----------------------------------------------------------------------------------------------------History-Reiter laden-----------------------------------------------------------       
+        onIconTabSelect: function (oEvent) {
+            if (oEvent.getParameter("key") !== "history") {
+                return;
+            }
+
+            const oHistory = this.getView().getModel("history");
+            const sDocId = this._getCurrentDocumentId();
+
+            if (!oHistory || !sDocId) {
+                return;
+            }
+
+            const aLogs = oHistory.getProperty("/logs") || [];
+            const sLastDocId = oHistory.getProperty("/lastDocId");
+
+            // Wenn Logs fehlen oder DocId gewechselt hat → laden
+            if (!aLogs.length || sLastDocId !== sDocId) {
+                oHistory.setProperty("/lastDocId", sDocId);
+                this._loadHistoryLogs();
+            }
+        },
+
+    _loadHistoryLogs: async function () {
+  const oHistory = this.getView().getModel("history");
+  const oAuth = this.getOwnerComponent().getModel("auth");
+
+  const sType = oAuth?.getProperty("/tokenType");
+  const sTok  = oAuth?.getProperty("/token");
+  const sDocId = this._getCurrentDocumentId();
+
+  if (!sDocId) {
+    oHistory.setProperty("/logs", []);
+    return;
+  }
+
+  if (!sTok) {
+    oHistory.setProperty("/logs", [{
+      message: "No auth token available.",
+      date: new Date(),
+      code: "",
+      statusText: "Information",
+      statusState: "Information"
+    }]);
+    return;
+  }
+
+  oHistory.setProperty("/busy", true);
+
+  try {
+    // API laut Beschreibung: .../documenthub/document(DocumentId)
+    // Wir versuchen zuerst exakt diese Form, und fallback auf /document/<id>
+    const sBase = "https://test.app.clarc.com:443/application/api/v1/documenthub";
+    const sUrl1 = `${sBase}/document(${encodeURIComponent(sDocId)})`;
+    const sUrl2 = `${sBase}/document/${encodeURIComponent(sDocId)}`;
+
+    const oHeaders = {
+      "Authorization": `${sType} ${sTok}`,
+      "Accept": "application/json"
+    };
+
+    let oData;
+    try {
+      const r1 = await fetch(sUrl1, { method: "GET", headers: oHeaders });
+      if (!r1.ok) throw new Error(`HTTP ${r1.status} ${r1.statusText}`);
+      oData = await r1.json();
+    } catch (e1) {
+      const r2 = await fetch(sUrl2, { method: "GET", headers: oHeaders });
+      if (!r2.ok) throw new Error(`HTTP ${r2.status} ${r2.statusText}`);
+      oData = await r2.json();
+    }
+
+    const aChangeLog = Array.isArray(oData?.ChangeLog) ? oData.ChangeLog : [];
+    const sDocState = oData?.State || "";
+
+    // Mapping: ChangeLog[] -> List Items
+    const aLogs = aChangeLog
+      .map((x) => {
+        const oDateRaw = x?.Date;
+        const nMs = oDateRaw?.$date ?? oDateRaw; // unterstützt {$date: ...} oder direkt ms
+        const d = nMs ? new Date(nMs) : new Date();
+
+        const sMsg = x?.Text || "";
+        const sCode = x?.Code || "";
+        const sTypeLog = x?.Type || "";
+
+        const oStatus = this._mapHistoryStatus(sDocState, sTypeLog, sCode, sMsg);
+
+        return {
+          message: this._buildHistoryMessage(x),
+          date: d,
+          code: sCode,
+          statusText: oStatus.text,
+          statusState: oStatus.state
+        };
+      })
+      // neueste zuerst (wie im Screenshot)
+      .sort((a, b) => (b.date?.getTime?.() || 0) - (a.date?.getTime?.() || 0));
+
+    oHistory.setProperty("/logs", aLogs);
+
+  } catch (err) {
+    oHistory.setProperty("/logs", [{
+      message: `Failed to load history: ${err.message || err}`,
+      date: new Date(),
+      code: "",
+      statusText: "Warning",
+      statusState: "Warning"
+    }]);
+  } finally {
+    oHistory.setProperty("/busy", false);
+  }
+},
+
+_buildHistoryMessage: function (x) {
+  // Beispiel wie im Screenshot: "processing exception [...]"
+  // Wenn du es lieber kurz willst: nur x.Text zurückgeben.
+  const sText = x?.Text || "";
+  const sType = x?.Type || "";
+  const sUser = x?.User || "";
+
+  // Beispiel-Output:
+  // "document created" (ccMT_Insert, test)
+  // oder wenn Text schon ausführlich ist: nur Text.
+  if (sText && sText.length > 0) {
+    return sText;
+  }
+  return [sType, sUser].filter(Boolean).join(" - ");
+},
+
+_mapHistoryStatus: function (sDocState, sLogType /* ccMT_* */, sCode, sMsg) {
+  switch (sLogType) {
+    case "ccMT_Success":
+      return { text: "Success", state: "Success" };
+
+    case "ccMT_Info":
+      return { text: "Information", state: "Information" };
+
+    case "ccMT_Warning":
+      return { text: "Warning", state: "Warning" };
+
+    case "ccMT_Error":
+      return { text: "Error", state: "Error" };
+
+    case "ccMT_Update":
+      // Update ist fachlich meist kein Fehler -> Info (oder Success, wenn ihr das so wollt)
+      return { text: "Information", state: "Information" };
+
+    default:
+      return { text: "Information", state: "Information" };
+  }
+},
+
+formatHistoryMeta: function (dDate, sCode) {
+  if (!dDate) return sCode || "";
+
+  const oFmt = sap.ui.core.format.DateFormat.getDateTimeInstance({
+    pattern: "dd.MM.yy HH:mm:ss"
+  });
+
+  const sD = oFmt.format(dDate instanceof Date ? dDate : new Date(dDate));
+  const sC = (sCode || "").trim();
+
+  return sC ? `${sD} | ${sC}` : sD;
+},
+
   //---------------------------------------------------------------------------------------------------Edit Templates----------------------------------------------------------------
         onEditTemplate: function () {
             // Dialog lazy laden
@@ -80,47 +341,6 @@ sap.ui.define([
             }
         },
 
-
-    _onRouteMatched: function (oEvent) {
-        const sInvoiceId = oEvent.getParameter("arguments").invoiceId;
-
-        // Layout sicherstellen (falls du mainView im Details auch hast)
-        const oMainViewModel = this.getView().getModel("mainView");
-        if (oMainViewModel) {
-            oMainViewModel.setProperty("/layout", "TwoColumnsBeginExpanded");
-        }
-
-        // ✅ Backend-Model holen (aus Component ist am sichersten)
-        const oModel = this.getOwnerComponent().getModel("backend");
-        if (!oModel) {
-            console.error("Model 'backend' nicht gefunden");
-            return;
-        }
-
-        const aInvoices = oModel.getProperty("/value") || [];
-
-        const oInvoice = aInvoices.find(function (o) {
-            return o?.MetaData?.Object?.Data?.Basics?.Number?.Value === sInvoiceId;
-        });
-
-        if (oInvoice) {
-            // ✅ /CurrentInvoice dynamisch anlegen/überschreiben
-            oModel.setProperty("/CurrentInvoice", oInvoice);
-
-            // ✅ View an /CurrentInvoice binden
-            this.getView().bindElement({
-                path: "/CurrentInvoice",
-                model: "backend"
-            });
-
-            this._preparePdfSourceFromInvoice(oInvoice);
-
-        } else {
-                console.warn("Keine Rechnung mit ID", sInvoiceId, "gefunden");
-            }
-        this._rebuildLists();
-    },
-
     //---------------------------------------------------------------------------------------------------PDF anzeigen----------------------------------------------------------------
         _preparePdfSourceFromInvoice: function (oInvoice) {
         return Details_PDFViewHelper.preparePdfSourceFromInvoice(this, oInvoice);
@@ -140,26 +360,6 @@ sap.ui.define([
 
         onClose: function () {
         return Details_PDFViewHelper.onClose(this);
-        },
-
-        //Preview im Panel updaten
-        _refreshPreviewPanel: function () {
-            const oModel = this.getOwnerComponent().getModel("backend");
-            const oInvoice = oModel.getProperty("/CurrentInvoice");
-            if (!oInvoice) { return; }
-
-            // BlobItems (PDF + Images) im Carousel neu aufbauen
-            this._preparePdfSourceFromInvoice(oInvoice);
-
-            // Carousel einmal „anstoßen“, falls Binding nicht sofort redrawt
-            const oCarousel = this.byId("blobCarousel");
-            if (oCarousel) {
-                const oBind = oCarousel.getBinding("pages");
-                if (oBind && oBind.refresh) {
-                    oBind.refresh(true);
-                }
-                oCarousel.invalidate(); // sorgt zuverlässig fürs Re-Render
-            }
         },
 
 
@@ -284,7 +484,7 @@ onAttachmentItemAdded: async function (oEvent) {
         const aBlobs = oModel.getProperty("/CurrentInvoice/MetaData/Blobs") || [];
         oModel.setProperty("/CurrentInvoice/InvoiceBlobs", aBlobs.filter(b => b?.Type === "ccBT_Invoice"));
         oModel.setProperty("/CurrentInvoice/AttachmentBlobs", aBlobs.filter(b => b?.Type !== "ccBT_Invoice"));
-        this._refreshPreviewPanel();
+        this._refreshPanel();
     },
 
     _getCurrentDocumentId: function () {
@@ -544,8 +744,5 @@ _openUploadSetItem: function (oUSItem) {
 
   window.open(sUrl, "_blank", "noopener");
 },
-
-
-
     });
 });

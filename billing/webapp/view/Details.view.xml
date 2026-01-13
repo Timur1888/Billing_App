@@ -7,7 +7,7 @@
       </headerContent>
       <content>
          <!-- Tabs: Overview / History -->
-         <IconTabBar id="itbDetails" expanded="true" upperCase="false" selectedKey="overview">
+         <IconTabBar id="itbDetails" expanded="true" upperCase="false" selectedKey="overview" select=".onIconTabSelect">
             <items>
                <!-- ================== OVERVIEW TAB ================== -->
                <IconTabFilter key="overview" text="Overview">
@@ -108,10 +108,48 @@
                </IconTabFilter>
                <!-- ================== HISTORY TAB ================== -->
                <IconTabFilter key="history" text="History">
-                  <VBox class="sapUiSmallMargin">
-                     <Text text="History-Inhalt kommt später hier hin..." />
-                  </VBox>
+               <VBox class="sapUiSmallMargin" width="100%">
+
+                  <List
+                     id="lstHistory"
+                     width="100%"
+                     items="{history>/logs}"
+                     noDataText="No history entries."
+                     growing="true"
+                     growingScrollToLoad="true"
+                     showSeparators="Inner">
+
+                     <CustomListItem>
+                     <VBox width="100%" class="sapUiTinyMarginTop sapUiTinyMarginBottom">
+
+                        <!-- 1. Zeile: Message links, Status rechts -->
+                        <HBox width="100%" justifyContent="SpaceBetween" alignItems="Center">
+                           <Text
+                           text="{history>message}"
+                           wrapping="true"
+                           maxLines="2" />
+
+                           <ObjectStatus
+                           text="{history>statusText}"
+                           state="{history>statusState}"
+                           inverted="true"
+                           class="sapUiTinyMarginBegin" />
+                        </HBox>
+
+                        <!-- 2. Zeile: Datum | Code -->
+                        <Text
+                        text="{parts: [{path:'history>date'}, {path:'history>code'}], formatter: '.formatHistoryMeta'}"
+                        wrapping="false"
+                        class="sapUiTinyMarginTop sapUiTinyMarginBottom sapUiSmallMarginBottom sapUiTinyMarginBegin"
+                        />
+
+                     </VBox>
+                     </CustomListItem>
+
+                  </List>
+               </VBox>
                </IconTabFilter>
+
             </items>
          </IconTabBar>
       </content>
