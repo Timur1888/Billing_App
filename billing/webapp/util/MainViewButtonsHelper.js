@@ -38,6 +38,57 @@ sap.ui.define([
         oTokenizer.removeAllTokens();
         oTokenizer.setVisible(false);
       }
+
+      // ==========================================================
+      // WICHTIG: Panel refreshen, falls es offen war
+      // ==========================================================
+      try {
+        const oMainViewModel = oController.getView().getModel("mainView");
+        const sLayout = oMainViewModel?.getProperty("/layout");
+        const bPanelOpen = !!(sLayout && sLayout !== "OneColumn");
+        if (!bPanelOpen) {
+          return;
+        }
+
+        // Hash: "Details/{invoiceId}"
+        const oHashChanger = sap.ui.core.routing.HashChanger.getInstance();
+        const sHash = (oHashChanger.getHash() || "").split("?")[0].trim(); // z.B. "Details/90000553"
+        const aParts = sHash.split("/").filter(Boolean);
+
+        if (!(aParts.length >= 2 && aParts[0] === "Details")) {
+          return;
+        }
+
+        const sInvoiceId = decodeURIComponent(aParts[1] || "");
+        if (!sInvoiceId) {
+          return;
+        }
+
+        // ✅ ROBUST: RootControl (App-View) holen und dort layout finden
+        const oRoot = oComponent.getRootControl();          // -> App.view.xml Instanz
+        const oLayoutCtrl = oRoot && oRoot.byId ? oRoot.byId("layout") : null;
+
+        if (!oLayoutCtrl) {
+          console.warn("FCL Layout nicht gefunden über oComponent.getRootControl().byId('layout').");
+          // Fallback: DetailsRoute triggern
+          oComponent.getRouter().navTo("DetailsRoute", { invoiceId: sInvoiceId }, true);
+          return;
+        }
+
+        const aMidPages = (oLayoutCtrl.getMidColumnPages && oLayoutCtrl.getMidColumnPages()) || [];
+        const oDetailsPage = aMidPages.find(p => typeof p.getController === "function");
+        const oDetailsCtrl = oDetailsPage?.getController?.();
+
+        if (oDetailsCtrl?.refreshFromInvoiceId) {
+          oDetailsCtrl.refreshFromInvoiceId(sInvoiceId);
+        } else {
+          // Falls Details-View noch nicht da ist -> navTo
+          oComponent.getRouter().navTo("DetailsRoute", { invoiceId: sInvoiceId }, true);
+        }
+
+      } catch (e) {
+        console.warn("Panel-Refresh nach Reload fehlgeschlagen:", e);
+      }
     },
 
     // ---------------------------------------------------

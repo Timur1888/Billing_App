@@ -50,6 +50,7 @@ sap.ui.define([
             });
         },
 
+        //Baut Panel komplett neu wenn User eine Rechung selektiert
         _onRouteMatched: function (oEvent) {
             const sInvoiceId = oEvent.getParameter("arguments").invoiceId;
 
@@ -67,10 +68,18 @@ sap.ui.define([
             }
 
             const aInvoices = oModel.getProperty("/value") || [];
+            const sWanted = String(sInvoiceId || "").trim();
 
-            const oInvoice = aInvoices.find(function (o) {
-                return o?.MetaData?.Object?.Data?.Basics?.Number?.Value === sInvoiceId;
+            let oInvoice = aInvoices.find(function (o) {
+                const v = o?.MetaData?.Object?.Data?.Basics?.Number?.Value;
+                return String(v ?? "").trim() === sWanted;
             });
+
+            if (!oInvoice) {
+                oInvoice = aInvoices.find(function (o) {
+                    return String(o?.Id ?? "").trim() === sWanted;
+                });
+            }
 
             if (oInvoice) {
                 // ✅ /CurrentInvoice dynamisch anlegen/überschreiben
@@ -82,16 +91,54 @@ sap.ui.define([
                     model: "backend"
                 });
 
-                this._refreshPreviewPanel();
-
+                this._refreshPanel();
+                this._rebuildLists();
             } else {
-                    console.warn("Keine Rechnung mit ID", sInvoiceId, "gefunden");
-                }
+                console.warn("Keine Rechnung mit ID", sInvoiceId, "gefunden");
+                console.log("Wanted:", sWanted);
+                console.log("Sample Number.Values:", (aInvoices || []).slice(0, 5).map(x =>
+                x?.MetaData?.Object?.Data?.Basics?.Number?.Value
+                ));
+                onsole.log("Sample Ids:", (aInvoices || []).slice(0, 5).map(x => x?.Id));
+            }
+        },
+
+        //Baut Panel komplett neu wenn User Refresh Button mit dem offenen Panel drückt
+        refreshFromInvoiceId: function (sInvoiceId) {
+            const oModel = this.getOwnerComponent().getModel("backend");
+            if (!oModel) { return; }
+
+            const aInvoices = oModel.getProperty("/value") || [];
+            const sWanted = String(sInvoiceId || "").trim();
+
+            let oInvoice = aInvoices.find(o =>
+                String(o?.MetaData?.Object?.Data?.Basics?.Number?.Value ?? "").trim() === sWanted
+            );
+
+            if (!oInvoice) {
+                // Fallback: falls route mal DocId wäre
+                oInvoice = aInvoices.find(o => String(o?.Id ?? "").trim() === sWanted);
+            }
+
+            if (!oInvoice) {
+                console.warn("refreshFromInvoiceId: Invoice nicht gefunden:", sInvoiceId);
+                return;
+            }
+
+            oModel.setProperty("/CurrentInvoice", oInvoice);
+
+            this.getView().bindElement({
+                path: "/CurrentInvoice",
+                model: "backend"
+            });
+
+            this._refreshPanel();
             this._rebuildLists();
         },
 
-        //  Refrescht den Panel den Änderungen zur Laufzeit
-        _refreshPreviewPanel: function () {
+
+        //  Refrescht die Reiter im Panel zur Laufzeit. 13.01.2026 Overview: Preview der Bilder; History: das ganze History
+        _refreshPanel: function () {
             const oView = this.getView();
             const oBackend = this.getOwnerComponent().getModel("backend");
             const oHistory = oView.getModel("history");
@@ -142,7 +189,6 @@ sap.ui.define([
                 }
             }
         },
-
 
  //-----------------------------------------------------------------------------------------------------History-Reiter laden-----------------------------------------------------------       
         onIconTabSelect: function (oEvent) {
