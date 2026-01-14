@@ -3,7 +3,7 @@
     xmlns="sap.m"
     xmlns:core="sap.ui.core">
 
-    <Page id="page" title="{i18n>title}">
+    <Page id="page" title="Billing">
         
         <customHeader>
             
