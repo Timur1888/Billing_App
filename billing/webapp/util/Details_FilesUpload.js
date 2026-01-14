@@ -68,10 +68,12 @@ sap.ui.define([], function () {
     // ---------------------------------------------------------------------------------------------------
     onAfterInvoiceItemRemoved: async function (oController, oEvent) {
       await this.handleUploadSetItemRemoved(oController, oEvent, "uploadSetInvoice");
+      oController._loadHistoryLogs(true);
     },
 
     onAfterAttachmentItemRemoved: async function (oController, oEvent) {
       await this.handleUploadSetItemRemoved(oController, oEvent, "uploadSetAttachments");
+      oController._loadHistoryLogs(true);
     },
 
     handleUploadSetItemRemoved: async function (oController, oEvent, sUploadSetId) {
@@ -224,6 +226,7 @@ sap.ui.define([], function () {
 
           oBackendModel.setProperty("/CurrentInvoice/MetaData/Blobs", aNew);
           this.rebuildLists(oController);
+          oController._loadHistoryLogs(true);
         }
 
         // Pending Items entfernen

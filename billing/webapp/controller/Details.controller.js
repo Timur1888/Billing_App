@@ -15,8 +15,9 @@ sap.ui.define([
 
             if (!this.getView().getModel("history")) {
                 this.getView().setModel(new sap.ui.model.json.JSONModel({
-                busy: false,
-                logs: []
+                    busy: false,
+                    logs: [],
+                    lastDocId: "" // ✅ NEU: Cache-Feld sauber initialisieren
                 }), "history");
             }
 
@@ -25,9 +26,9 @@ sap.ui.define([
                 subject: "",
                 body: "",
                 languages: [
-                    { key: "de", name: "German",  selected: true  },
+                    { key: "de", name: "German", selected: true },
                     { key: "en", name: "English", selected: false },
-                    { key: "fr", name: "French",  selected: false },
+                    { key: "fr", name: "French", selected: false },
                     { key: "es", name: "Spanish", selected: false }
                 ]
             });
@@ -43,26 +44,27 @@ sap.ui.define([
             const oRouter = UIComponent.getRouterFor(this);
             oRouter.getRoute("DetailsRoute").attachPatternMatched(this._onRouteMatched, this);
 
-            //immer unten lassen, damit werden die Items für die Bilder klickbar
+            // immer unten lassen, damit werden die Items für die Bilder klickbar
             this.byId("uploadSetInvoice")?.addEventDelegate({
-            onAfterRendering: () => this._wireUploadSetItemPress("uploadSetInvoice")
+                onAfterRendering: () => this._wireUploadSetItemPress("uploadSetInvoice")
             });
             this.byId("uploadSetAttachments")?.addEventDelegate({
-            onAfterRendering: () => this._wireUploadSetItemPress("uploadSetAttachments")
+                onAfterRendering: () => this._wireUploadSetItemPress("uploadSetAttachments")
             });
         },
 
-        //Baut Panel komplett neu wenn User eine Rechung selektiert
+        // ==========================================================
+        // Panel komplett neu wenn User eine Rechnung selektiert
+        // ==========================================================
         _onRouteMatched: function (oEvent) {
             const sInvoiceId = oEvent.getParameter("arguments").invoiceId;
 
-            // Layout sicherstellen (falls du mainView im Details auch hast)
+            // Layout sicherstellen
             const oMainViewModel = this.getView().getModel("mainView");
             if (oMainViewModel) {
                 oMainViewModel.setProperty("/layout", "TwoColumnsBeginExpanded");
             }
 
-            // ✅ Backend-Model holen (aus Component ist am sichersten)
             const oModel = this.getOwnerComponent().getModel("backend");
             if (!oModel) {
                 console.error("Model 'backend' nicht gefunden");
@@ -83,29 +85,31 @@ sap.ui.define([
                 });
             }
 
-            if (oInvoice) {
-                // ✅ /CurrentInvoice dynamisch anlegen/überschreiben
-                oModel.setProperty("/CurrentInvoice", oInvoice);
-
-                // ✅ View an /CurrentInvoice binden
-                this.getView().bindElement({
-                    path: "/CurrentInvoice",
-                    model: "backend"
-                });
-
-                this._refreshPanel();
-                this._rebuildLists();
-            } else {
+            if (!oInvoice) {
                 console.warn("Keine Rechnung mit ID", sInvoiceId, "gefunden");
-                console.log("Wanted:", sWanted);
-                console.log("Sample Number.Values:", (aInvoices || []).slice(0, 5).map(x =>
-                x?.MetaData?.Object?.Data?.Basics?.Number?.Value
-                ));
-                onsole.log("Sample Ids:", (aInvoices || []).slice(0, 5).map(x => x?.Id));
+                return;
             }
+
+            oModel.setProperty("/CurrentInvoice", oInvoice);
+
+            this.getView().bindElement({
+                path: "/CurrentInvoice",
+                model: "backend"
+            });
+
+            // ✅ Overview/Preview aktualisieren
+            this._refreshPanel();
+
+            // ✅ HISTORY: Sofort laden beim Öffnen/Wechseln
+            this._loadHistoryLogs(true);
+
+            // ✅ UploadSets/Listen neu aufbauen
+            this._rebuildLists();
         },
 
-        //Baut Panel komplett neu wenn User Refresh Button mit dem offenen Panel drückt
+        // ==========================================================
+        // Panel neu wenn User Refresh Button mit offenem Panel drückt
+        // ==========================================================
         refreshFromInvoiceId: function (sInvoiceId) {
             const oModel = this.getOwnerComponent().getModel("backend");
             if (!oModel) { return; }
@@ -118,7 +122,6 @@ sap.ui.define([
             );
 
             if (!oInvoice) {
-                // Fallback: falls route mal DocId wäre
                 oInvoice = aInvoices.find(o => String(o?.Id ?? "").trim() === sWanted);
             }
 
@@ -134,25 +137,24 @@ sap.ui.define([
                 model: "backend"
             });
 
+            // ✅ Overview/Preview aktualisieren
             this._refreshPanel();
+
+            // ✅ HISTORY: auch beim Refresh neu laden (Helper cached nach DocId)
+            this._loadHistoryLogs();
+
             this._rebuildLists();
         },
 
-
-        //  Refrescht die Reiter im Panel zur Laufzeit. 13.01.2026 Overview: Preview der Bilder; History: das ganze History
+        // ==========================================================
+        // Refresht NUR Overview (Preview/Carousel) zur Laufzeit
+        // ==========================================================
         _refreshPanel: function () {
-            const oView = this.getView();
             const oBackend = this.getOwnerComponent().getModel("backend");
-            const oHistory = oView.getModel("history");
+            const oInvoice = oBackend?.getProperty("/CurrentInvoice");
+            if (!oInvoice) { return; }
 
-            const oInvoice = oBackend.getProperty("/CurrentInvoice");
-            if (!oInvoice || !oHistory) {
-                return;
-            }
-
-            // =====================================================
             // OVERVIEW: Preview / Carousel aktualisieren
-            // =====================================================
             this._preparePdfSourceFromInvoice(oInvoice);
 
             const oCarousel = this.byId("blobCarousel");
@@ -163,54 +165,35 @@ sap.ui.define([
                 }
                 oCarousel.invalidate();
             }
-
-            // =====================================================
-            // HISTORY: Live-Refresh bei Rechnungswechsel
-            // =====================================================
-            const sDocId = this._getCurrentDocumentId();
-            const sLastDocId = oHistory.getProperty("/lastDocId");
-            const sActiveTab = this.byId("itbDetails")?.getSelectedKey?.();
-
-            // Wenn keine DocId → History leeren
-            if (!sDocId) {
-                oHistory.setProperty("/logs", []);
-                oHistory.setProperty("/lastDocId", "");
-                return;
-            }
-
-            // Wenn Rechnung gewechselt hat
-            if (sDocId !== sLastDocId) {
-
-                // Alte Logs sofort entfernen (kein "Ghost History")
-                oHistory.setProperty("/logs", []);
-                oHistory.setProperty("/lastDocId", sDocId);
-
-                // Nur laden, wenn History sichtbar ist
-                if (sActiveTab === "history") {
-                    this._loadHistoryLogs();
-                }
-            }
         },
 
-        //-----------------------------------------------------------------------------------------------------History-Reiter laden-----------------------------------------------------------       
+        // ==========================================================
+        // HISTORY: Tab Select -> sicherstellen, dass Logs da sind
+        // ==========================================================
         onIconTabSelect: function (oEvent) {
-        return Details_HistoryHelper.onIconTabSelect(this, oEvent);
+            const sKey = oEvent.getParameter("key");
+            if (sKey === "history") {
+                // ✅ Beim Klick auf History nochmal sicher laden (cached -> kein Doppelcall)
+                this._loadHistoryLogs();
+            }
+            // Wenn du im Helper noch andere Logik hast (z.B. scroll), kannst du ihn trotzdem callen:
+            // return Details_HistoryHelper.onIconTabSelect(this, oEvent);
         },
 
-        _loadHistoryLogs: function () {
-        return Details_HistoryHelper.loadHistoryLogs(this);
+        _loadHistoryLogs: function (bForce) {
+        return Details_HistoryHelper.loadHistoryLogs(this, !!bForce);
         },
 
         _mapHistoryStatus: function (sDocState, sLogType, sCode, sMsg) {
-        return Details_HistoryHelper.mapHistoryStatus(sDocState, sLogType, sCode, sMsg);
+            return Details_HistoryHelper.mapHistoryStatus(sDocState, sLogType, sCode, sMsg);
         },
 
         formatHistoryMeta: function (dDate, sCode) {
-        return Details_HistoryHelper.formatHistoryMeta(dDate, sCode);
+            return Details_HistoryHelper.formatHistoryMeta(dDate, sCode);
         },
-  //---------------------------------------------------------------------------------------------------Edit Templates----------------------------------------------------------------
+
+        // ------------------------------- Edit Templates -------------------------------
         onEditTemplate: function () {
-            // Dialog lazy laden
             if (!this._oTemplateDialog) {
                 Fragment.load({
                     name: "billing.view.MessageTemplateDialog",
@@ -232,63 +215,63 @@ sap.ui.define([
         },
 
         onTemplateDialogSave: function () {
-            // Hier später: Template speichern / Backend-Call etc.
-            // Aktuell schließen wir nur den Dialog.
             if (this._oTemplateDialog) {
                 this._oTemplateDialog.close();
             }
         },
-    //---------------------------------------------------------------------------------------------------PDF anzeigen----------------------------------------------------------------
+
+        // ------------------------------- PDF anzeigen -------------------------------
         _preparePdfSourceFromInvoice: function (oInvoice) {
-        return Details_PDFViewHelper.preparePdfSourceFromInvoice(this, oInvoice);
+            return Details_PDFViewHelper.preparePdfSourceFromInvoice(this, oInvoice);
         },
 
         onPdfPress: function () {
-        return Details_PDFViewHelper.onPdfPress(this);
-        },
-        onFilePress: function () {
-        return Details_PDFViewHelper.onFilePress(this);
+            return Details_PDFViewHelper.onPdfPress(this);
         },
 
+        onFilePress: function () {
+            return Details_PDFViewHelper.onFilePress(this);
+        },
 
         onBlobPageChanged: function (oEvent) {
-        return Details_PDFViewHelper.onBlobPageChanged(this, oEvent);
+            return Details_PDFViewHelper.onBlobPageChanged(this, oEvent);
         },
 
         onClose: function () {
-        return Details_PDFViewHelper.onClose(this);
+            return Details_PDFViewHelper.onClose(this);
         },
-    //---------------------------------------------------------------------------------------------------Uploader----------------------------------------------------------------
+
+        // ------------------------------- Uploader -------------------------------
         onInvoiceItemAdded: function (oEvent) {
-        return Details_FilesUpload.onInvoiceItemAdded(this, oEvent);
+            return Details_FilesUpload.onInvoiceItemAdded(this, oEvent);
         },
 
         onAttachmentItemAdded: function (oEvent) {
-        return Details_FilesUpload.onAttachmentItemAdded(this, oEvent);
+            return Details_FilesUpload.onAttachmentItemAdded(this, oEvent);
         },
 
         onAfterInvoiceItemRemoved: function (oEvent) {
-        return Details_FilesUpload.onAfterInvoiceItemRemoved(this, oEvent);
+            return Details_FilesUpload.onAfterInvoiceItemRemoved(this, oEvent);
         },
 
         onAfterAttachmentItemRemoved: function (oEvent) {
-        return Details_FilesUpload.onAfterAttachmentItemRemoved(this, oEvent);
+            return Details_FilesUpload.onAfterAttachmentItemRemoved(this, oEvent);
         },
 
         _rebuildLists: function () {
-        return Details_FilesUpload.rebuildLists(this);
+            return Details_FilesUpload.rebuildLists(this);
         },
 
         _getCurrentDocumentId: function () {
-        return Details_FilesUpload.getCurrentDocumentId(this);
+            return Details_FilesUpload.getCurrentDocumentId(this);
         },
 
         onBrowseInvoice: function () {
-        return Details_FilesUpload.onBrowseInvoice(this);
+            return Details_FilesUpload.onBrowseInvoice(this);
         },
 
         _wireUploadSetItemPress: function (sUploadSetId) {
-        return Details_FilesUpload.wireUploadSetItemPress(this, sUploadSetId);
-        },
+            return Details_FilesUpload.wireUploadSetItemPress(this, sUploadSetId);
+        }
     });
 });

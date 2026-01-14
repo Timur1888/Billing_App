@@ -24,20 +24,38 @@ sap.ui.define([], function () {
       }
     },
 
-    loadHistoryLogs: async function (oController) {
+    loadHistoryLogs: async function (oController, bForce, bClearImmediately) {
       const oHistory = oController.getView().getModel("history");
       const oAuth = oController.getOwnerComponent().getModel("auth");
+
+      if (!oHistory) { return; }
+
+      const bDoForce = !!bForce;
+      const bDoClear = (bClearImmediately !== undefined) ? !!bClearImmediately : bDoForce; 
+      // ✅ Optional: wenn Force -> default auch clear
 
       const sType = oAuth?.getProperty("/tokenType");
       const sTok  = oAuth?.getProperty("/token");
       const sDocId = oController._getCurrentDocumentId?.();
 
-      if (!oHistory) { return; }
-
       if (!sDocId) {
+        oHistory.setProperty("/lastDocId", "");
         oHistory.setProperty("/logs", []);
         return;
       }
+
+      const sLastDocId = oHistory.getProperty("/lastDocId");
+      if (!bDoForce && sLastDocId === sDocId) {
+        return; // bereits geladen für diese Rechnung
+      }
+
+      // ✅ Optional: sofort leeren, damit UI nicht “alte Logs” zeigt während reload
+      if (bDoClear) {
+        oHistory.setProperty("/logs", []);
+      }
+
+      // Cache markieren
+      oHistory.setProperty("/lastDocId", sDocId);
 
       if (!sTok) {
         oHistory.setProperty("/logs", [{
@@ -53,8 +71,6 @@ sap.ui.define([], function () {
       oHistory.setProperty("/busy", true);
 
       try {
-        // API laut Beschreibung: .../documenthub/document(DocumentId)
-        // Wir versuchen zuerst exakt diese Form, und fallback auf /document/<id>
         const sBase = "https://test.app.clarc.com:443/application/api/v1/documenthub";
         const sUrl1 = `${sBase}/document(${encodeURIComponent(sDocId)})`;
         const sUrl2 = `${sBase}/document/${encodeURIComponent(sDocId)}`;
@@ -78,17 +94,17 @@ sap.ui.define([], function () {
         const aChangeLog = Array.isArray(oData?.ChangeLog) ? oData.ChangeLog : [];
         const sDocState = oData?.State || "";
 
-        // Mapping: ChangeLog[] -> List Items
         const aLogs = aChangeLog
           .map((x) => {
             const oDateRaw = x?.Date;
-            const nMs = oDateRaw?.$date ?? oDateRaw; // unterstützt {$date: ...} oder direkt ms
+            const nMs = oDateRaw?.$date ?? oDateRaw;
             const d = nMs ? new Date(nMs) : new Date();
 
             const sMsg = x?.Text || "";
             const sCode = x?.Code || "";
             const sTypeLog = x?.Type || "";
 
+            // ✅ robust: Helper-Funktionen über "this" (weil wir im Helper sind)
             const oStatus = this.mapHistoryStatus(sDocState, sTypeLog, sCode, sMsg);
 
             return {
@@ -99,7 +115,6 @@ sap.ui.define([], function () {
               statusState: oStatus.state
             };
           })
-          // neueste zuerst
           .sort((a, b) => (b.date?.getTime?.() || 0) - (a.date?.getTime?.() || 0));
 
         oHistory.setProperty("/logs", aLogs);
@@ -116,6 +131,8 @@ sap.ui.define([], function () {
         oHistory.setProperty("/busy", false);
       }
     },
+
+
 
     buildHistoryMessage: function (x) {
       const sText = x?.Text || "";
