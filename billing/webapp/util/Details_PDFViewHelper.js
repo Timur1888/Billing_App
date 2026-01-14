@@ -23,7 +23,7 @@ sap.ui.define([
       };
 
       // ==========================================================
-      // ✅ NEU: PDFs expandieren: pro ViewBlob (Seite) ein Item
+      // PDFs expandieren: pro ViewBlob (Seite) ein Item
       // ==========================================================
       const aItems = [];
 
