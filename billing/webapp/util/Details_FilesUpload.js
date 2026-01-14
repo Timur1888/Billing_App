@@ -185,8 +185,8 @@ sap.ui.define([], function () {
           const oCtx = oItem.getBindingContext && oItem.getBindingContext("backend");
           const oObj = oCtx && oCtx.getObject ? oCtx.getObject() : null;
 
-          const bIsBackendBlob = !!(oObj && oObj.Id && (oObj.FileName || oObj.MimeType));
-          if (bIsBackendBlob) {
+          // bereits persistiert → skip
+          if (oObj?.Id && (oObj.FileName || oObj.MimeType)) {
             continue;
           }
 
@@ -198,7 +198,8 @@ sap.ui.define([], function () {
             continue;
           }
 
-          const sB64 = await this.fileToBase64(oController, oFile); // wrapper unten
+          const sB64 = await this.fileToBase64(oFile);
+
           aPayload.push({
             FileName: oFile.name,
             MimeType: oFile.type || "application/octet-stream",
@@ -226,10 +227,10 @@ sap.ui.define([], function () {
         }
 
         // Pending Items entfernen
-        if (oUS && oUS.removeIncompleteItem) {
-          for (const oItem of aItems) {
+        if (oUS?.removeIncompleteItem) {
+          aItems.forEach(oItem => {
             try { oUS.removeIncompleteItem(oItem); } catch (e) { /* ignore */ }
-          }
+          });
         }
 
       } finally {
@@ -238,21 +239,6 @@ sap.ui.define([], function () {
 
       this.wireUploadSetItemPress(oController, "uploadSetInvoice");
       this.wireUploadSetItemPress(oController, "uploadSetAttachments");
-    },
-
-    // helper wrapper (damit Aufruf oben gleich bleibt)
-    fileToBase64: async function (oController, oFile) {
-      // oController wird nicht gebraucht, aber Signatur bleibt einheitlich
-      return new Promise((resolve, reject) => {
-        const r = new FileReader();
-        r.onload = () => {
-          const s = String(r.result || "");
-          const base64 = s.includes("base64,") ? s.split("base64,")[1] : s;
-          resolve(base64);
-        };
-        r.onerror = reject;
-        r.readAsDataURL(oFile);
-      });
     },
 
     postRemoveBlobs: async function (oController, aBlobIds) {

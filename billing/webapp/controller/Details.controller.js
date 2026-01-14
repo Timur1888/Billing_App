@@ -201,10 +201,6 @@ sap.ui.define([
         return Details_HistoryHelper.loadHistoryLogs(this);
         },
 
-        _buildHistoryMessage: function (x) {
-        return Details_HistoryHelper.buildHistoryMessage(x);
-        },
-
         _mapHistoryStatus: function (sDocState, sLogType, sCode, sMsg) {
         return Details_HistoryHelper.mapHistoryStatus(sDocState, sLogType, sCode, sMsg);
         },
@@ -212,8 +208,6 @@ sap.ui.define([
         formatHistoryMeta: function (dDate, sCode) {
         return Details_HistoryHelper.formatHistoryMeta(dDate, sCode);
         },
-
-
   //---------------------------------------------------------------------------------------------------Edit Templates----------------------------------------------------------------
         onEditTemplate: function () {
             // Dialog lazy laden
@@ -244,7 +238,6 @@ sap.ui.define([
                 this._oTemplateDialog.close();
             }
         },
-
     //---------------------------------------------------------------------------------------------------PDF anzeigen----------------------------------------------------------------
         _preparePdfSourceFromInvoice: function (oInvoice) {
         return Details_PDFViewHelper.preparePdfSourceFromInvoice(this, oInvoice);
@@ -265,7 +258,6 @@ sap.ui.define([
         onClose: function () {
         return Details_PDFViewHelper.onClose(this);
         },
-
     //---------------------------------------------------------------------------------------------------Uploader----------------------------------------------------------------
         onInvoiceItemAdded: function (oEvent) {
         return Details_FilesUpload.onInvoiceItemAdded(this, oEvent);
@@ -273,10 +265,6 @@ sap.ui.define([
 
         onAttachmentItemAdded: function (oEvent) {
         return Details_FilesUpload.onAttachmentItemAdded(this, oEvent);
-        },
-
-        _postAppendBlobs: function (aBlobPayload) {
-        return Details_FilesUpload.postAppendBlobs(this, aBlobPayload);
         },
 
         onAfterInvoiceItemRemoved: function (oEvent) {
@@ -287,10 +275,6 @@ sap.ui.define([
         return Details_FilesUpload.onAfterAttachmentItemRemoved(this, oEvent);
         },
 
-        _handleUploadSetItemRemoved: function (oEvent, sUploadSetId) {
-        return Details_FilesUpload.handleUploadSetItemRemoved(this, oEvent, sUploadSetId);
-        },
-
         _rebuildLists: function () {
         return Details_FilesUpload.rebuildLists(this);
         },
@@ -299,34 +283,12 @@ sap.ui.define([
         return Details_FilesUpload.getCurrentDocumentId(this);
         },
 
-        _fileToBase64: function (oFile) {
-        // kannst du behalten, oder delegieren:
-        return Details_FilesUpload.fileToBase64(this, oFile);
-        },
-
         onBrowseInvoice: function () {
         return Details_FilesUpload.onBrowseInvoice(this);
-        },
-
-        _persistUploadSetItems: function (aItems, sBlobType, sUploadSetId) {
-        return Details_FilesUpload.persistUploadSetItems(this, aItems, sBlobType, sUploadSetId);
-        },
-
-        _postRemoveBlobs: function (aBlobIds) {
-        return Details_FilesUpload.postRemoveBlobs(this, aBlobIds);
-        },
-
-        _mergeBlobsKeepOrder: function (aOld, aFromResp) {
-        return Details_FilesUpload.mergeBlobsKeepOrder(aOld, aFromResp);
         },
 
         _wireUploadSetItemPress: function (sUploadSetId) {
         return Details_FilesUpload.wireUploadSetItemPress(this, sUploadSetId);
         },
-
-        _openUploadSetItem: function (oUSItem) {
-        return Details_FilesUpload.openUploadSetItem(this, oUSItem);
-        },
-
     });
 });
