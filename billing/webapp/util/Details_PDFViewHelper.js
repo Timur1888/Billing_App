@@ -8,67 +8,106 @@ sap.ui.define([
     // PDF: Source vorbereiten (URL oder Base64 -> ObjectURL)
     // ==========================================================
     preparePdfSourceFromInvoice: function (oController, oInvoice) {
-        const oModel = oController.getOwnerComponent().getModel("backend");
-        if (!oModel) { return; }
+      const oModel = oController.getOwnerComponent().getModel("backend");
+      if (!oModel) { return; }
 
-        const aBlobs = oInvoice?.MetaData?.Blobs || [];
+      const aBlobs = oInvoice?.MetaData?.Blobs || [];
 
-        const isPdf = (b) =>
-          b?.MimeType === "application/pdf" || ((b?.FileName || "").toLowerCase().endsWith(".pdf"));
+      const isPdf = (b) =>
+        b?.MimeType === "application/pdf" || ((b?.FileName || "").toLowerCase().endsWith(".pdf"));
 
-        const isImg = (b) => {
-          const fn = (b?.FileName || "").toLowerCase();
-          return (b?.MimeType || "").startsWith("image/") ||
-                fn.endsWith(".png") || fn.endsWith(".jpg") || fn.endsWith(".jpeg");
-        };
+      const isImg = (b) => {
+        const fn = (b?.FileName || "").toLowerCase();
+        return (b?.MimeType || "").startsWith("image/") ||
+          fn.endsWith(".png") || fn.endsWith(".jpg") || fn.endsWith(".jpeg");
+      };
 
-        // ✅ PDF + Bilder als Items (Reihenfolge wie Backend)
-        const aItems = aBlobs
-          .filter(b => isPdf(b) || isImg(b))
-          .map(b => {
-            const bIsPdf = isPdf(b);
-            const sFileName = b.FileName || b.Name || (bIsPdf ? "PDF" : "Image");
-            const sLink = b.Link || "";
+      // ==========================================================
+      // ✅ NEU: PDFs expandieren: pro ViewBlob (Seite) ein Item
+      // ==========================================================
+      const aItems = [];
 
-            // PDF: preview aus ViewBlobs, Bild: direkt Link verwenden
-            const sPreview = bIsPdf ? (b?.ViewBlobs?.[0]?.Link || "") : sLink;
+      aBlobs
+        .filter(b => isPdf(b) || isImg(b))
+        .forEach(b => {
+          const bIsPdf = isPdf(b);
+          const sFileName = b.FileName || b.Name || (bIsPdf ? "PDF" : "Image");
+          const sLink = b.Link || "";
 
-            return {
-              sortId: b.SortId,
-              id: b.Id,
-              fileName: sFileName,
-              mimeType: b.MimeType || "",
-              fileLink: sLink,             // ✅ „Original“ zum Öffnen
-              previewLink: sPreview,       // ✅ für Carousel-<Image>
-              kind: bIsPdf ? "pdf" : "image",
-              icon: bIsPdf ? "sap-icon://pdf-attachment" : "sap-icon://attachment-photo",
-              openText: bIsPdf ? "Open PDF" : "Open Image"
-            };
+          if (bIsPdf) {
+            const aViewBlobs = Array.isArray(b?.ViewBlobs) ? b.ViewBlobs : [];
+
+            // Wenn Backend Seiten-Previews liefert -> jede Seite als eigenes Carousel-Item
+            if (aViewBlobs.length > 0) {
+              aViewBlobs.forEach((vb, idx) => {
+                aItems.push({
+                  sortId: b.SortId,
+                  id: `${b.Id || sFileName}__p${idx + 1}`,   // ✅ eindeutige ID pro Seite
+                  fileName: `${sFileName} (p.${idx + 1})`,  // optional
+                  mimeType: b.MimeType || "",
+                  fileLink: sLink,                           // ✅ Original PDF zum Öffnen
+                  previewLink: vb?.Link || "",               // ✅ Preview der Seite
+                  kind: "pdf",
+                  icon: "sap-icon://pdf-attachment",
+                  openText: "Open PDF",
+                  pageIndex: idx + 1                          // optional (nur Info)
+                });
+              });
+            } else {
+              // Fallback: keine ViewBlobs -> nur 1 Item
+              aItems.push({
+                sortId: b.SortId,
+                id: b.Id,
+                fileName: sFileName,
+                mimeType: b.MimeType || "",
+                fileLink: sLink,
+                previewLink: "",
+                kind: "pdf",
+                icon: "sap-icon://pdf-attachment",
+                openText: "Open PDF"
+              });
+            }
+
+            return;
+          }
+
+          // Image bleibt 1:1
+          aItems.push({
+            sortId: b.SortId,
+            id: b.Id,
+            fileName: sFileName,
+            mimeType: b.MimeType || "",
+            fileLink: sLink,
+            previewLink: sLink,
+            kind: "image",
+            icon: "sap-icon://attachment-photo",
+            openText: "Open Image"
           });
+        });
 
-        oModel.setProperty("/CurrentInvoice/BlobItems", aItems);
+      oModel.setProperty("/CurrentInvoice/BlobItems", aItems);
 
-        // Selektion beibehalten (wie bei dir)
-        const iOldIndex = oModel.getProperty("/CurrentInvoice/SelectedBlobIndex");
-        const sOldId = (Number.isInteger(iOldIndex) && aItems[iOldIndex]) ? aItems[iOldIndex].id : null;
+      // Selektion beibehalten (wie bei dir)
+      const iOldIndex = oModel.getProperty("/CurrentInvoice/SelectedBlobIndex");
+      const sOldId = (Number.isInteger(iOldIndex) && aItems[iOldIndex]) ? aItems[iOldIndex].id : null;
 
-        let iNewIndex = 0;
-        if (sOldId) {
-          const idx = aItems.findIndex(x => x.id === sOldId);
-          if (idx >= 0) iNewIndex = idx;
-        } else if (Number.isInteger(iOldIndex) && iOldIndex >= 0 && iOldIndex < aItems.length) {
-          iNewIndex = iOldIndex;
-        }
+      let iNewIndex = 0;
+      if (sOldId) {
+        const idx = aItems.findIndex(x => x.id === sOldId);
+        if (idx >= 0) iNewIndex = idx;
+      } else if (Number.isInteger(iOldIndex) && iOldIndex >= 0 && iOldIndex < aItems.length) {
+        iNewIndex = iOldIndex;
+      }
 
-        oModel.setProperty("/CurrentInvoice/SelectedBlobIndex", iNewIndex);
+      oModel.setProperty("/CurrentInvoice/SelectedBlobIndex", iNewIndex);
 
-        const oSel = aItems[iNewIndex] || null;
+      const oSel = aItems[iNewIndex] || null;
 
-        // Für onFilePress brauchen wir jetzt generische Felder:
-        oModel.setProperty("/CurrentInvoice/SelectedFileKind", oSel?.kind || "");
-        oModel.setProperty("/CurrentInvoice/SelectedFileSource", oSel?.fileLink || "");
-        oModel.setProperty("/CurrentInvoice/PdfSource", oSel?.kind === "pdf" ? (oSel?.fileLink || "") : "");
+      oModel.setProperty("/CurrentInvoice/SelectedFileKind", oSel?.kind || "");
+      oModel.setProperty("/CurrentInvoice/SelectedFileSource", oSel?.fileLink || "");
+      oModel.setProperty("/CurrentInvoice/PdfSource", oSel?.kind === "pdf" ? (oSel?.fileLink || "") : "");
     },
+
 
 
 
