@@ -39,8 +39,8 @@ sap.ui.define([
       // TODO: Diese Werte durch eure echten dev-Zugangsdaten ersetzen
       const oPayload = {
         Credentials: {
-          Username:   "Willi",
-          Password:   "Ecmdemo2025!",
+          Username:   "",
+          Password:   "",
           Tenant:     "acme",
           SystemClass:"ccSC_Development",
           Language:   "DE",
