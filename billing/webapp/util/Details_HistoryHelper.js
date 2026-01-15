@@ -27,12 +27,10 @@ sap.ui.define([], function () {
     loadHistoryLogs: async function (oController, bForce, bClearImmediately) {
       const oHistory = oController.getView().getModel("history");
       const oAuth = oController.getOwnerComponent().getModel("auth");
-
       if (!oHistory) { return; }
 
       const bDoForce = !!bForce;
-      const bDoClear = (bClearImmediately !== undefined) ? !!bClearImmediately : bDoForce; 
-      // ✅ Optional: wenn Force -> default auch clear
+      const bDoClear = (bClearImmediately !== undefined) ? !!bClearImmediately : bDoForce;
 
       const sType = oAuth?.getProperty("/tokenType");
       const sTok  = oAuth?.getProperty("/token");
@@ -41,20 +39,21 @@ sap.ui.define([], function () {
       if (!sDocId) {
         oHistory.setProperty("/lastDocId", "");
         oHistory.setProperty("/logs", []);
+        oHistory.setProperty("/billingId", "");     // ✅ NEU: reset
+        oHistory.setProperty("/historyDocId", "");  // ✅ optional
         return;
       }
 
       const sLastDocId = oHistory.getProperty("/lastDocId");
       if (!bDoForce && sLastDocId === sDocId) {
-        return; // bereits geladen für diese Rechnung
+        return;
       }
 
-      // ✅ Optional: sofort leeren, damit UI nicht “alte Logs” zeigt während reload
       if (bDoClear) {
         oHistory.setProperty("/logs", []);
       }
 
-      // Cache markieren
+      // Cache markieren (damit parallele Calls nicht doppelt feuern)
       oHistory.setProperty("/lastDocId", sDocId);
 
       if (!sTok) {
@@ -65,6 +64,7 @@ sap.ui.define([], function () {
           statusText: "Information",
           statusState: "Information"
         }]);
+        oHistory.setProperty("/billingId", ""); // ✅ NEU
         return;
       }
 
@@ -91,6 +91,11 @@ sap.ui.define([], function () {
           oData = await r2.json();
         }
 
+        // ✅ NEU: BillingId aus History-Response ablegen
+        const sBillingId = (oData?.Process?.Manager?.Id || "").trim();
+        oHistory.setProperty("/billingId", sBillingId);
+        oHistory.setProperty("/historyDocId", (oData?.Id || "").trim()); // optional
+
         const aChangeLog = Array.isArray(oData?.ChangeLog) ? oData.ChangeLog : [];
         const sDocState = oData?.State || "";
 
@@ -104,7 +109,6 @@ sap.ui.define([], function () {
             const sCode = x?.Code || "";
             const sTypeLog = x?.Type || "";
 
-            // ✅ robust: Helper-Funktionen über "this" (weil wir im Helper sind)
             const oStatus = this.mapHistoryStatus(sDocState, sTypeLog, sCode, sMsg);
 
             return {
@@ -127,6 +131,7 @@ sap.ui.define([], function () {
           statusText: "Warning",
           statusState: "Warning"
         }]);
+        oHistory.setProperty("/billingId", ""); // ✅ NEU: damit nix “altes” bleibt
       } finally {
         oHistory.setProperty("/busy", false);
       }

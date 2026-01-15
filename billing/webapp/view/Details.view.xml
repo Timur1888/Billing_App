@@ -73,25 +73,27 @@
                      </VBox>
                      <!-- Output -->
                      <Title text="Output" level="H4" class="sapUiMediumMarginTop" />
-                     <VBox class="sapUiSmallMarginTop" width="97%">
-                        <Select width="100%" class="sapUiSmallMarginBottom">
-                           <items>
-                              <core:Item key="transF" text="Transfer Format" />
-                              <core:Item key="fx" text="Factur-X" />
-                              <core:Item key="pdf" text="PDF" />
-                           </items>
-                        </Select>
-                        <Select width="100%" class="sapUiSmallMarginBottom">
-                           <items>
-                              <core:Item key="delMeth" text="Delivery Method" />
-                              <core:Item key="email" text="Email" />
-                              <core:Item key="post" text="Postal Service" />
-                           </items>
-                        </Select>
-                        <Input placeholder="Receiver" class="sapUiSmallMarginBottom" />
-                        <Input placeholder="CC" class="sapUiSmallMarginBottom" />
-                        <Input placeholder="BCC" class="sapUiSmallMarginBottom" />
-                     </VBox>
+<VBox class="sapUiSmallMarginTop" width="97%">
+    <Select width="100%" class="sapUiSmallMarginBottom" selectedKey="{send>/transferFormat}">
+        <items>
+            <core:Item key="transF" text="Transfer Format" />
+            <core:Item key="fx" text="Factur-X" />
+            <core:Item key="pdf" text="PDF" />
+        </items>
+    </Select>
+
+    <Select width="100%" class="sapUiSmallMarginBottom" selectedKey="{send>/deliveryMethod}">
+        <items>
+            <core:Item key="delMeth" text="Delivery Method" />
+            <core:Item key="email" text="Email" />
+            <core:Item key="post" text="Postal Service" />
+        </items>
+    </Select>
+
+    <Input placeholder="Receiver" class="sapUiSmallMarginBottom" value="{send>/recipient}" />
+    <Input placeholder="CC"       class="sapUiSmallMarginBottom" value="{send>/cc}" />
+    <Input placeholder="BCC"      class="sapUiSmallMarginBottom" value="{send>/bcc}" />
+</VBox>
                      <!-- Job Settings -->
                      <Title text="Job Settings" level="H4" class="sapUiMediumMarginTop" />
                      <HBox class="sapUiSmallMarginTop" alignItems="Center">
@@ -158,7 +160,7 @@
          <Toolbar>
             <ToolbarSpacer />
             <Button text="Save" type="Transparent" />
-            <Button text="Send" type="Emphasized" class="sendButton" />
+            <Button text="Send" type="Emphasized" class="sendButton" press=".onSendInvoice"/>
          </Toolbar>
       </footer>
    </Page>

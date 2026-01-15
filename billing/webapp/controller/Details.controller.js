@@ -12,14 +12,24 @@ sap.ui.define([
 
     return Controller.extend("billing.controller.Details", {
         onInit() {
-
             if (!this.getView().getModel("history")) {
                 this.getView().setModel(new sap.ui.model.json.JSONModel({
-                    busy: false,
-                    logs: [],
-                    lastDocId: "" // ✅ NEU: Cache-Feld sauber initialisieren
+                busy: false,
+                logs: [],              //Braucht man für History
+                lastDocId: "",
+                billingId: "",      // wird beim Senden der Nachricht benutzt benutzt
+                historyDocId: ""   // ✅ optional: DocId aus history-call (für Debug)
                 }), "history");
             }
+
+            var oSendModel = new sap.ui.model.json.JSONModel({
+                transferFormat: "pdf",
+                deliveryMethod: "email",
+                recipient: "",
+                cc: "",
+                bcc: ""
+            });
+            this.getView().setModel(oSendModel, "send");
 
             // Template-Model für Dialog
             var oTemplateModel = new JSONModel({
@@ -272,6 +282,110 @@ sap.ui.define([
 
         _wireUploadSetItemPress: function (sUploadSetId) {
             return Details_FilesUpload.wireUploadSetItemPress(this, sUploadSetId);
-        }
+        },
+//---------------------------------------------------------------------------------------------Senden------------------------------------------------------------------------------------------------------
+        onSendInvoice: async function () {
+            const oView    = this.getView();
+            const oSend    = oView.getModel("send");
+            const oAuth    = this.getOwnerComponent().getModel("auth");
+            const oHistory = oView.getModel("history");
+            const oModel   = this.getOwnerComponent().getModel("backend");
+
+            // ---------------------------
+            // Helper: String → [{Address}]
+            // ---------------------------
+            const fnToAddressArray = (s) =>
+            (s || "")
+                .split(",")
+                .map(x => x.trim())
+                .filter(Boolean)
+                .map(addr => ({
+                Address: addr,
+                Email: addr,   // ✅ fallback
+                Value: addr    // ✅ fallback
+                }));
+
+            // 1) Werte aus UI
+            const sRecipient = (oSend?.getProperty("/recipient") || "").trim();
+            const sCc        = (oSend?.getProperty("/cc") || "").trim();
+            const sBcc       = (oSend?.getProperty("/bcc") || "").trim();
+
+            if (!sRecipient) {
+                sap.m.MessageBox.warning("Please enter a Receiver email.");
+                return;
+            }
+
+            const sDocHubItemId = (oModel?.getProperty("/CurrentInvoice/Id") || "").trim();
+            if (!sDocHubItemId) {
+                sap.m.MessageBox.error("No document selected (DocHubItemId is empty).");
+                return;
+            }
+
+            // BillingId aus history-Model
+            let sBillingId = (oHistory?.getProperty("/billingId") || "").trim();
+            if (!sBillingId && typeof this._loadHistoryLogs === "function") {
+                await this._loadHistoryLogs(true);
+                sBillingId = (oHistory?.getProperty("/billingId") || "").trim();
+            }
+
+            if (!sBillingId) {
+                sap.m.MessageBox.error("Billing Id not found.");
+                return;
+            }
+
+            // Token
+            const sType = (oAuth?.getProperty("/tokenType") || "Bearer").trim();
+            const sTok  = (oAuth?.getProperty("/token") || "").trim();
+            if (!sTok) {
+                sap.m.MessageBox.error("No auth token found.");
+                return;
+            }
+
+            // ---------------------------
+            // Payload (NEUE STRUKTUR)
+            // ---------------------------
+            const oPayload = {
+                DocHubItemId: sDocHubItemId,
+                Recipient: fnToAddressArray(sRecipient),
+                Cc: fnToAddressArray(sCc),
+                Bcc: fnToAddressArray(sBcc),
+                Subject: "Testbetreff TKA",
+                Body: "Test TKA"
+            };
+
+            if (!oPayload.Recipient.length) {
+                sap.m.MessageBox.error("At least one recipient is required.");
+                return;
+            }
+
+            const sUrl =
+                `https://test.app.clarc.com:443/application/api/v1/bpm/billing(${encodeURIComponent(sBillingId)})/sendinvoice`;
+
+            try {
+                oView.setBusy(true);
+
+                const oResp = await fetch(sUrl, {
+                method: "POST",
+                credentials: "include",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `${sType} ${sTok}`
+                },
+                body: JSON.stringify(oPayload)
+                });
+
+                const sText = await oResp.text();
+                if (!oResp.ok) {
+                sap.m.MessageBox.error(`Send failed (${oResp.status}): ${sText}`);
+                return;
+                }
+
+                sap.m.MessageToast.show("Invoice sent successfully.");
+            } catch (e) {
+                sap.m.MessageBox.error(`Send failed: ${e?.message || e}`);
+            } finally {
+                oView.setBusy(false);
+            }
+        },
     });
 });
