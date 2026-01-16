@@ -1,13 +1,15 @@
 sap.ui.define([
-    "sap/ui/core/mvc/Controller",
-    "sap/ui/core/UIComponent",
-    "sap/ui/core/Fragment",
-    "sap/ui/model/json/JSONModel",
-    "sap/m/PDFViewer",
-    "billing/util/Details_PDFViewHelper",
-    "billing/util/Details_HistoryHelper",
-    "billing/util/Details_FilesUpload"
-], (Controller, UIComponent, Fragment, JSONModel, PDFViewer, Details_PDFViewHelper, Details_HistoryHelper, Details_FilesUpload) => {
+  "sap/ui/core/mvc/Controller",
+  "sap/ui/core/UIComponent",
+  "sap/ui/core/Fragment",
+  "sap/ui/model/json/JSONModel",
+  "sap/m/PDFViewer",
+  "sap/m/MessageToast",
+  "billing/util/Details_PDFViewHelper",
+  "billing/util/Details_HistoryHelper",
+  "billing/util/Details_FilesUpload"
+], (Controller, UIComponent, Fragment, JSONModel, PDFViewer, MessageToast, Details_PDFViewHelper, Details_HistoryHelper, Details_FilesUpload) => {
+
     "use strict";
 
     return Controller.extend("billing.controller.Details", {
@@ -31,18 +33,12 @@ sap.ui.define([
             });
             this.getView().setModel(oSendModel, "send");
 
-            // Template-Model für Dialog
-            var oTemplateModel = new JSONModel({
-                subject: "",
-                body: "",
-                languages: [
-                    { key: "de", name: "German", selected: true },
-                    { key: "en", name: "English", selected: false },
-                    { key: "fr", name: "French", selected: false },
-                    { key: "es", name: "Spanish", selected: false }
-                ]
-            });
+            // Persistentes Template-Model (bleibt im View erhalten)
+            var oTemplateModel = new JSONModel(this._getEmptyTemplateData());
             this.getView().setModel(oTemplateModel, "template");
+
+            this._pMsgTemplateDialog = null;
+            this._oTemplateBackup = null; // optional: falls du Cancel "rückgängig" statt "löschen" willst
 
             // ✅ PDFViewer wie im UI5 Sample (einmalig)
             this._oPdfViewer = new PDFViewer({
@@ -63,6 +59,113 @@ sap.ui.define([
             });
         },
 
+        // ------------------------------- Edit Templates -------------------------------
+
+        _getEmptyTemplateData: function () {
+        return {
+            subject: "",
+            body: "",
+            selectedLanguageKey: "en",   // ✅ gespeicherte Auswahl (wird bei Save übernommen)
+            languages: [
+            { key: "de", name: "German" },
+            { key: "en", name: "English" },
+            { key: "fr", name: "French" },
+            { key: "es", name: "Spanish" }
+            ]
+        };
+        },
+
+        onOpenTemplateDialog: function () {
+        var oView = this.getView();
+        var oModel = oView.getModel("template");
+
+        // ✅ Backup: Subject + Body + LanguageKey (wie gespeichert)
+        this._oTemplateBackup = {
+            subject: oModel.getProperty("/subject") || "",
+            body: oModel.getProperty("/body") || "",
+            selectedLanguageKey: oModel.getProperty("/selectedLanguageKey") || "en"
+        };
+
+        if (!this._pMsgTemplateDialog) {
+            this._pMsgTemplateDialog = Fragment.load({
+            id: oView.getId(),
+            name: "billing.view.MessageTemplateDialog", // ggf. dein richtiger Pfad
+            controller: this
+            }).then(function (oDialog) {
+            oView.addDependent(oDialog);
+            return oDialog;
+            });
+        }
+
+        this._pMsgTemplateDialog.then(function (oDialog) {
+            oDialog.open();
+
+            // ✅ wichtig: nach dem Öffnen Selection korrekt setzen
+            setTimeout(function () {
+            this._applyLanguageSelection();
+            }.bind(this), 0);
+        }.bind(this));
+        },
+
+
+
+
+        onTemplateDialogSave: function () {
+        var oModel = this.getView().getModel("template");
+
+        this._oTemplateBackup = {
+            subject: oModel.getProperty("/subject") || "",
+            body: oModel.getProperty("/body") || "",
+            selectedLanguageKey: oModel.getProperty("/selectedLanguageKey") || "en"
+        };
+
+        this.byId("msgTemplateDialog").close();
+        },
+
+
+        onTemplateDialogCancel: function () {
+        var oModel = this.getView().getModel("template");
+
+        if (this._oTemplateBackup) {
+            oModel.setProperty("/subject", this._oTemplateBackup.subject || "");
+            oModel.setProperty("/body", this._oTemplateBackup.body || "");
+            oModel.setProperty("/selectedLanguageKey", this._oTemplateBackup.selectedLanguageKey || "en");
+        }
+
+        this._applyLanguageSelection();
+        this.byId("msgTemplateDialog").close();
+        },
+
+        onLanguageSelectionChange: function (oEvent) {
+            var oItem = oEvent.getParameter("listItem");
+            if (!oItem) { return; }
+
+            var sKey = oItem.getBindingContext("template").getProperty("key");
+            this.getView().getModel("template").setProperty("/selectedLanguageKey", sKey);
+        },
+
+        _applyLanguageSelection: function () {
+        var oList = this.byId("lstLanguages");
+        var oModel = this.getView().getModel("template");
+        if (!oList || !oModel) { return; }
+
+        var sKey = oModel.getProperty("/selectedLanguageKey") || "en";
+        var aItems = oList.getItems() || [];
+
+        // Fallback: erste Sprache, falls Key nicht gefunden
+        var oMatch = aItems.find(function (oItem) {
+            return oItem.getBindingContext("template")?.getProperty("key") === sKey;
+        }) || aItems[0];
+
+        oList.removeSelections(true);
+        if (oMatch) {
+            oList.setSelectedItem(oMatch, true);
+        }
+        },
+
+
+
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------
         // ==========================================================
         // Panel komplett neu wenn User eine Rechnung selektiert
         // ==========================================================
@@ -202,34 +305,6 @@ sap.ui.define([
             return Details_HistoryHelper.formatHistoryMeta(dDate, sCode);
         },
 
-        // ------------------------------- Edit Templates -------------------------------
-        onEditTemplate: function () {
-            if (!this._oTemplateDialog) {
-                Fragment.load({
-                    name: "billing.view.MessageTemplateDialog",
-                    controller: this
-                }).then(function (oDialog) {
-                    this._oTemplateDialog = oDialog;
-                    this.getView().addDependent(oDialog);
-                    oDialog.open();
-                }.bind(this));
-            } else {
-                this._oTemplateDialog.open();
-            }
-        },
-
-        onTemplateDialogCancel: function () {
-            if (this._oTemplateDialog) {
-                this._oTemplateDialog.close();
-            }
-        },
-
-        onTemplateDialogSave: function () {
-            if (this._oTemplateDialog) {
-                this._oTemplateDialog.close();
-            }
-        },
-
         // ------------------------------- PDF anzeigen -------------------------------
         _preparePdfSourceFromInvoice: function (oInvoice) {
             return Details_PDFViewHelper.preparePdfSourceFromInvoice(this, oInvoice);
@@ -284,108 +359,107 @@ sap.ui.define([
             return Details_FilesUpload.wireUploadSetItemPress(this, sUploadSetId);
         },
 //---------------------------------------------------------------------------------------------Senden------------------------------------------------------------------------------------------------------
-        onSendInvoice: async function () {
-            const oView    = this.getView();
-            const oSend    = oView.getModel("send");
-            const oAuth    = this.getOwnerComponent().getModel("auth");
-            const oHistory = oView.getModel("history");
-            const oModel   = this.getOwnerComponent().getModel("backend");
+onSendInvoice: async function () {
+  const oView    = this.getView();
+  const oSend    = oView.getModel("send");
+  const oAuth    = this.getOwnerComponent().getModel("auth");
+  const oHistory = oView.getModel("history");
+  const oModel   = this.getOwnerComponent().getModel("backend");
 
-            // ---------------------------
-            // Helper: String → [{Address}]
-            // ---------------------------
-            const fnToAddressArray = (s) =>
-            (s || "")
-                .split(",")
-                .map(x => x.trim())
-                .filter(Boolean)
-                .map(addr => ({
-                Address: addr,
-                Email: addr,   // ✅ fallback
-                Value: addr    // ✅ fallback
-                }));
+  // ---------------------------
+  // Helper: String → [{Address}]
+  // ---------------------------
+  const fnToAddressArray = (s) =>
+    (s || "")
+      .split(",")
+      .map(x => x.trim())
+      .filter(Boolean)
+      .map(addr => ({ Address: addr }));   // ✅ NUR Address
 
-            // 1) Werte aus UI
-            const sRecipient = (oSend?.getProperty("/recipient") || "").trim();
-            const sCc        = (oSend?.getProperty("/cc") || "").trim();
-            const sBcc       = (oSend?.getProperty("/bcc") || "").trim();
+  // 1) Werte aus UI
+  const sRecipient = (oSend?.getProperty("/recipient") || "").trim();
+  const sCc        = (oSend?.getProperty("/cc") || "").trim();
+  const sBcc       = (oSend?.getProperty("/bcc") || "").trim();
 
-            if (!sRecipient) {
-                sap.m.MessageBox.warning("Please enter a Receiver email.");
-                return;
-            }
+  if (!sRecipient) {
+    sap.m.MessageBox.warning("Please enter a Receiver email.");
+    return;
+  }
 
-            const sDocHubItemId = (oModel?.getProperty("/CurrentInvoice/Id") || "").trim();
-            if (!sDocHubItemId) {
-                sap.m.MessageBox.error("No document selected (DocHubItemId is empty).");
-                return;
-            }
+  const sDocHubItemId = (oModel?.getProperty("/CurrentInvoice/Id") || "").trim();
+  if (!sDocHubItemId) {
+    sap.m.MessageBox.error("No document selected (DocHubItemId is empty).");
+    return;
+  }
 
-            // BillingId aus history-Model
-            let sBillingId = (oHistory?.getProperty("/billingId") || "").trim();
-            if (!sBillingId && typeof this._loadHistoryLogs === "function") {
-                await this._loadHistoryLogs(true);
-                sBillingId = (oHistory?.getProperty("/billingId") || "").trim();
-            }
+  // BillingId aus history-Model
+  let sBillingId = (oHistory?.getProperty("/billingId") || "").trim();
+  if (!sBillingId && typeof this._loadHistoryLogs === "function") {
+    await this._loadHistoryLogs(true);
+    sBillingId = (oHistory?.getProperty("/billingId") || "").trim();
+  }
 
-            if (!sBillingId) {
-                sap.m.MessageBox.error("Billing Id not found.");
-                return;
-            }
+  if (!sBillingId) {
+    sap.m.MessageBox.error("Billing Id not found.");
+    return;
+  }
 
-            // Token
-            const sType = (oAuth?.getProperty("/tokenType") || "Bearer").trim();
-            const sTok  = (oAuth?.getProperty("/token") || "").trim();
-            if (!sTok) {
-                sap.m.MessageBox.error("No auth token found.");
-                return;
-            }
+  // Token
+  const sType = (oAuth?.getProperty("/tokenType") || "Bearer").trim();
+  const sTok  = (oAuth?.getProperty("/token") || "").trim();
+  if (!sTok) {
+    sap.m.MessageBox.error("No auth token found.");
+    return;
+  }
 
-            // ---------------------------
-            // Payload (NEUE STRUKTUR)
-            // ---------------------------
-            const oPayload = {
-                DocHubItemId: sDocHubItemId,
-                Recipient: fnToAddressArray(sRecipient),
-                Cc: fnToAddressArray(sCc),
-                Bcc: fnToAddressArray(sBcc),
-                Subject: "Testbetreff TKA",
-                Body: "Test TKA"
-            };
+  // ---------------------------
+  // Payload (ohne Email/Value)
+  // ---------------------------
+  const oPayload = {
+    DocHubItemId: sDocHubItemId,
+    Recipients: fnToAddressArray(sRecipient), // ✅ nur Address
+    Cc: fnToAddressArray(sCc),
+    Bcc: fnToAddressArray(sBcc),
+    Subject: "Testbetreff TKA",
+    Body: "Test TKA"
+  };
 
-            if (!oPayload.Recipient.length) {
-                sap.m.MessageBox.error("At least one recipient is required.");
-                return;
-            }
+  if (!oPayload.Recipients.length) {
+    sap.m.MessageBox.error("At least one recipient is required.");
+    return;
+  }
 
-            const sUrl =
-                `https://test.app.clarc.com:443/application/api/v1/bpm/billing(${encodeURIComponent(sBillingId)})/sendinvoice`;
+  const sUrl =
+    `https://test.app.clarc.com:443/application/api/v1/bpm/billing(${encodeURIComponent(sBillingId)})/sendinvoice`;
 
-            try {
-                oView.setBusy(true);
+  try {
+    oView.setBusy(true);
 
-                const oResp = await fetch(sUrl, {
-                method: "POST",
-                credentials: "include",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `${sType} ${sTok}`
-                },
-                body: JSON.stringify(oPayload)
-                });
+    const oResp = await fetch(sUrl, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Authorization": `${sType} ${sTok}`
+      },
+      body: JSON.stringify(oPayload)
+    });
 
-                const sText = await oResp.text();
-                if (!oResp.ok) {
-                sap.m.MessageBox.error(`Send failed (${oResp.status}): ${sText}`);
-                return;
-                }
+    const sText = await oResp.text();
+    if (!oResp.ok) {
+      sap.m.MessageBox.error(`Send failed (${oResp.status}): ${sText}`);
+      return;
+    }
 
-                sap.m.MessageToast.show("Invoice sent successfully.");
-            } catch (e) {
-                sap.m.MessageBox.error(`Send failed: ${e?.message || e}`);
-            } finally {
-                oView.setBusy(false);
-            }
-        },
+    sap.m.MessageToast.show("Invoice sent successfully.");
+
+  } catch (e) {
+    sap.m.MessageBox.error(`Send failed: ${e?.message || e}`);
+  } finally {
+    oView.setBusy(false);
+  }
+},
+
     });
 });
