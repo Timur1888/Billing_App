@@ -94,18 +94,32 @@
     <Input placeholder="CC"       class="sapUiSmallMarginBottom" value="{send>/cc}" />
     <Input placeholder="BCC"      class="sapUiSmallMarginBottom" value="{send>/bcc}" />
 </VBox>
-                     <!-- Job Settings -->
-                     <Title text="Job Settings" level="H4" class="sapUiMediumMarginTop" />
-                     <HBox class="sapUiSmallMarginTop" alignItems="Center">
-                        <Switch state="true" customTextOn="" customTextOff="" class="sapUiTinyMarginEnd" />
-                        <Text text="Manual Dispatch" />
-                     </HBox>
-                     <!-- Templates -->
-                     <Title text="Templates" level="H4" class="sapUiMediumMarginTop" />
-                     <VBox class="sapUiSmallMarginTop">
-                        <Label text="Subject" />
-                        <Button text="Edit" type="Emphasized" class="sapUiTinyMarginTop" width="3rem" press=".onOpenTemplateDialog" />
-                     </VBox>
+<!-- ================== Templates ================== -->
+<Title text="Templates" level="H4" class="sapUiMediumMarginTop" />
+
+<VBox class="sapUiSmallMarginTop">
+
+<!-- Subject -->
+<Label text="Subject" class="sapUiTinyMarginBottom" />
+<FormattedText
+    class="sapUiTinyMarginBottom"
+    htmlText="{path:'template>/subject', formatter: '.formatTemplateSubject'}" />
+
+<!-- Body -->
+<Label text="Body" class="sapUiMediumMarginTop sapUiTinyMarginBottom" />
+<FormattedText
+    class="sapUiSmallMarginBottom"
+    htmlText="{path:'template>/body', formatter: '.formatTemplateBody'}" />
+
+    <Button
+        text="Edit"
+        type="Emphasized"
+        class="sapUiTinyMarginTop"
+        width="3rem"
+        press=".onOpenTemplateDialog" />
+</VBox>
+<!-- ================================================= -->
+
                   </VBox>
                </IconTabFilter>
                <!-- ================== HISTORY TAB ================== -->

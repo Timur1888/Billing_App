@@ -108,8 +108,6 @@ sap.ui.define([
         },
 
 
-
-
         onTemplateDialogSave: function () {
         var oModel = this.getView().getModel("template");
 
@@ -163,7 +161,33 @@ sap.ui.define([
         }
         },
 
+formatTemplateSubject: function (sSubject) {
+  if (!sSubject || !sSubject.trim()) {
+    return ""; // ✅ nichts anzeigen
+  }
 
+  var s = this._escapeHtml(sSubject.trim());
+  return "<em>" + s + "</em>";
+},
+
+formatTemplateBody: function (sBody) {
+  if (!sBody || !sBody.trim()) {
+    return ""; // ✅ nichts anzeigen
+  }
+
+  var s = this._escapeHtml(sBody.trim());
+  s = s.replace(/\r?\n/g, "<br/>");
+  return "<em>" + s + "</em>";
+},
+
+_escapeHtml: function (s) {
+  return String(s || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+},
 
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------
         // ==========================================================
