@@ -17,12 +17,12 @@
                     <Label text="Subject:"/>
                     <Input
                         placeholder="Placeholder"
-                        value="{template>/subject}"
+                        value="{template>subject}"
                         class="sapUiSmallMarginBottom" />
 
                     <Label text="Body:"/>
                     <TextArea
-                        value="{template>/body}"
+                        value="{template>body}"
                         rows="10"
                         width="100%"
                         placeholder="Write your message here." />

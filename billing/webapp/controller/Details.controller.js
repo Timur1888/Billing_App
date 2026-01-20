@@ -10,191 +10,249 @@ sap.ui.define([
   "billing/util/Details_FilesUpload"
 ], (Controller, UIComponent, Fragment, JSONModel, PDFViewer, MessageToast, Details_PDFViewHelper, Details_HistoryHelper, Details_FilesUpload) => {
 
-    "use strict";
+  "use strict";
 
-    return Controller.extend("billing.controller.Details", {
-        onInit() {
-            if (!this.getView().getModel("history")) {
-                this.getView().setModel(new sap.ui.model.json.JSONModel({
-                busy: false,
-                logs: [],              //Braucht man für History
-                lastDocId: "",
-                billingId: "",      // wird beim Senden der Nachricht benutzt benutzt
-                historyDocId: ""   // ✅ optional: DocId aus history-call (für Debug)
-                }), "history");
-            }
+  return Controller.extend("billing.controller.Details", {
 
-            var oSendModel = new sap.ui.model.json.JSONModel({
-                transferFormat: "pdf",
-                deliveryMethod: "email",
-                recipient: "",
-                cc: "",
-                bcc: ""
-            });
-            this.getView().setModel(oSendModel, "send");
+    onInit() {
+      if (!this.getView().getModel("history")) {
+        this.getView().setModel(new sap.ui.model.json.JSONModel({
+          busy: false,
+          logs: [],
+          lastDocId: "",
+          billingId: "",
+          historyDocId: ""
+        }), "history");
+      }
 
-            // Persistentes Template-Model (bleibt im View erhalten)
-            var oTemplateModel = new JSONModel(this._getEmptyTemplateData());
-            this.getView().setModel(oTemplateModel, "template");
+      var oSendModel = new sap.ui.model.json.JSONModel({
+        transferFormat: "pdf",
+        deliveryMethod: "email",
+        recipient: "",
+        cc: "",
+        bcc: ""
+      });
+      this.getView().setModel(oSendModel, "send");
 
-            this._pMsgTemplateDialog = null;
-            this._oTemplateBackup = null; // optional: falls du Cancel "rückgängig" statt "löschen" willst
+      // ✅ Template-Model: pro Rechnung
+      var oTemplateModel = new JSONModel({
+        currentInvoiceKey: "",     // Rechnungsnummer (Key)
+        invoices: {},              // Map: { [invoiceKey]: {subject, body, selectedLanguageKey} }
+        languages: [
+          { key: "de", name: "German" },
+          { key: "en", name: "English" },
+          { key: "fr", name: "French" },
+          { key: "es", name: "Spanish" }
+        ]
+      });
+      this.getView().setModel(oTemplateModel, "template");
 
-            // ✅ PDFViewer wie im UI5 Sample (einmalig)
-            this._oPdfViewer = new PDFViewer({
-                isTrustedSource: true,
-                showDownloadButton: true
-            });
-            this.getView().addDependent(this._oPdfViewer);
+      this._pMsgTemplateDialog = null;
+      this._oTemplateBackup = null; // Backup nur für aktuelle Rechnung
 
-            const oRouter = UIComponent.getRouterFor(this);
-            oRouter.getRoute("DetailsRoute").attachPatternMatched(this._onRouteMatched, this);
+      // ✅ PDFViewer wie im UI5 Sample (einmalig)
+      this._oPdfViewer = new PDFViewer({
+        isTrustedSource: true,
+        showDownloadButton: true
+      });
+      this.getView().addDependent(this._oPdfViewer);
 
-            // immer unten lassen, damit werden die Items für die Bilder klickbar
-            this.byId("uploadSetInvoice")?.addEventDelegate({
-                onAfterRendering: () => this._wireUploadSetItemPress("uploadSetInvoice")
-            });
-            this.byId("uploadSetAttachments")?.addEventDelegate({
-                onAfterRendering: () => this._wireUploadSetItemPress("uploadSetAttachments")
-            });
-        },
+      const oRouter = UIComponent.getRouterFor(this);
+      oRouter.getRoute("DetailsRoute").attachPatternMatched(this._onRouteMatched, this);
+
+      // immer unten lassen, damit werden die Items für die Bilder klickbar
+      this.byId("uploadSetInvoice")?.addEventDelegate({
+        onAfterRendering: () => this._wireUploadSetItemPress("uploadSetInvoice")
+      });
+      this.byId("uploadSetAttachments")?.addEventDelegate({
+        onAfterRendering: () => this._wireUploadSetItemPress("uploadSetAttachments")
+      });
+    },
 
         // ------------------------------- Edit Templates -------------------------------
+    _ensureTemplateForInvoice: function (sInvoiceKey) {
+      var oModel = this.getView().getModel("template");
+      sInvoiceKey = String(sInvoiceKey || "").trim();   // ✅ WICHTIG
+      if (!oModel || !sInvoiceKey) { return; }
 
-        _getEmptyTemplateData: function () {
-        return {
-            subject: "",
-            body: "",
-            selectedLanguageKey: "en",   // ✅ gespeicherte Auswahl (wird bei Save übernommen)
-            languages: [
-            { key: "de", name: "German" },
-            { key: "en", name: "English" },
-            { key: "fr", name: "French" },
-            { key: "es", name: "Spanish" }
-            ]
-        };
-        },
+      oModel.setProperty("/currentInvoiceKey", sInvoiceKey);
 
-        onOpenTemplateDialog: function () {
-        var oView = this.getView();
-        var oModel = oView.getModel("template");
+      var sPath = "/invoices/" + sInvoiceKey;
+      var oExisting = oModel.getProperty(sPath);
 
-        // ✅ Backup: Subject + Body + LanguageKey (wie gespeichert)
+      if (!oExisting) {
+        oModel.setProperty(sPath, {
+          subject: "",
+          body: "",
+          selectedLanguageKey: "en"
+        });
+      }
+    },
+
+        _getCurrentTemplatePath: function () {
+      var oModel = this.getView().getModel("template");
+      var sKey = oModel?.getProperty("/currentInvoiceKey");
+      return sKey ? ("/invoices/" + sKey) : null;
+    },
+    _bindTemplateContexts: function () {
+      var sPath = this._getCurrentTemplatePath();
+      if (!sPath) { return; }
+
+      // ✅ Panel-Templates-Bereich (VBox) an aktuelle Rechnung binden
+      // Voraussetzung: Im XML dem Templates-VBox eine ID geben: id="tplBox"
+      var oTplBox = this.byId("tplBox");
+      if (oTplBox) {
+        oTplBox.bindElement({ path: sPath, model: "template" });
+      }
+
+      // ✅ Dialog (wenn schon geladen) auch auf aktuelle Rechnung binden
+      var oDialog = this.byId("msgTemplateDialog");
+      if (oDialog) {
+        oDialog.bindElement({ path: sPath, model: "template" });
+      }
+    },
+    
+
+    onOpenTemplateDialog: function () {
+      var oView = this.getView();
+      var oModel = oView.getModel("template");
+      var sPath = this._getCurrentTemplatePath();
+      if (!oModel || !sPath) { return; }
+
+      // ✅ Backup für Cancel (nur aktuelle Rechnung!)
+      this._oTemplateBackup = {
+        subject: oModel.getProperty(sPath + "/subject") || "",
+        body: oModel.getProperty(sPath + "/body") || "",
+        selectedLanguageKey: oModel.getProperty(sPath + "/selectedLanguageKey") || "en"
+      };
+
+      if (!this._pMsgTemplateDialog) {
+        this._pMsgTemplateDialog = Fragment.load({
+          id: oView.getId(),
+          name: "billing.view.MessageTemplateDialog",
+          controller: this
+        }).then(function (oDialog) {
+          oView.addDependent(oDialog);
+          return oDialog;
+        });
+      }
+
+      this._pMsgTemplateDialog.then(function (oDialog) {
+        // ✅ Dialog auf aktuelle Rechnung binden (relatives Binding im Fragment!)
+        oDialog.bindElement({ path: sPath, model: "template" });
+        oDialog.open();
+
+        // ✅ Sprache in der Liste korrekt setzen (nach Rendering)
+        setTimeout(function () {
+          this._applyLanguageSelection();
+        }.bind(this), 0);
+      }.bind(this));
+    },
+
+    onTemplateDialogSave: function () {
+      // Save = nichts extra (Binding ist live), nur schließen
+      this.byId("msgTemplateDialog")?.close();
+
+      // Backup aktualisieren (optional)
+      var oModel = this.getView().getModel("template");
+      var sPath = this._getCurrentTemplatePath();
+      if (oModel && sPath) {
         this._oTemplateBackup = {
-            subject: oModel.getProperty("/subject") || "",
-            body: oModel.getProperty("/body") || "",
-            selectedLanguageKey: oModel.getProperty("/selectedLanguageKey") || "en"
+          subject: oModel.getProperty(sPath + "/subject") || "",
+          body: oModel.getProperty(sPath + "/body") || "",
+          selectedLanguageKey: oModel.getProperty(sPath + "/selectedLanguageKey") || "en"
         };
+      }
 
-        if (!this._pMsgTemplateDialog) {
-            this._pMsgTemplateDialog = Fragment.load({
-            id: oView.getId(),
-            name: "billing.view.MessageTemplateDialog", // ggf. dein richtiger Pfad
-            controller: this
-            }).then(function (oDialog) {
-            oView.addDependent(oDialog);
-            return oDialog;
-            });
-        }
-
-        this._pMsgTemplateDialog.then(function (oDialog) {
-            oDialog.open();
-
-            // ✅ wichtig: nach dem Öffnen Selection korrekt setzen
-            setTimeout(function () {
-            this._applyLanguageSelection();
-            }.bind(this), 0);
-        }.bind(this));
-        },
+      // Panel-Templates ggf. direkt aktualisieren
+      this._bindTemplateContexts();
+    },
 
 
-        onTemplateDialogSave: function () {
-        var oModel = this.getView().getModel("template");
+    onTemplateDialogCancel: function () {
+      var oModel = this.getView().getModel("template");
+      var sPath = this._getCurrentTemplatePath();
+      if (!oModel || !sPath) { return; }
 
-        this._oTemplateBackup = {
-            subject: oModel.getProperty("/subject") || "",
-            body: oModel.getProperty("/body") || "",
-            selectedLanguageKey: oModel.getProperty("/selectedLanguageKey") || "en"
-        };
+      if (this._oTemplateBackup) {
+        oModel.setProperty(sPath + "/subject", this._oTemplateBackup.subject || "");
+        oModel.setProperty(sPath + "/body", this._oTemplateBackup.body || "");
+        oModel.setProperty(sPath + "/selectedLanguageKey", this._oTemplateBackup.selectedLanguageKey || "en");
+      }
 
-        this.byId("msgTemplateDialog").close();
-        },
+      this._applyLanguageSelection();
+      this.byId("msgTemplateDialog")?.close();
+
+      // Panel wieder auf gespeicherten Stand bringen
+      this._bindTemplateContexts();
+    },
+
+    onLanguageSelectionChange: function (oEvent) {
+      var oItem = oEvent.getParameter("listItem");
+      if (!oItem) { return; }
+
+      var sKey = oItem.getBindingContext("template")?.getProperty("key");
+      if (!sKey) { return; }
+
+      var oModel = this.getView().getModel("template");
+      var sPath = this._getCurrentTemplatePath();
+      if (!oModel || !sPath) { return; }
+
+      oModel.setProperty(sPath + "/selectedLanguageKey", sKey);
+    },
+
+    _applyLanguageSelection: function () {
+      var oList = this.byId("lstLanguages");
+      var oModel = this.getView().getModel("template");
+      var sPath = this._getCurrentTemplatePath();
+      if (!oList || !oModel || !sPath) { return; }
+
+      var sKey = oModel.getProperty(sPath + "/selectedLanguageKey") || "en";
+      var aItems = oList.getItems() || [];
+
+      var oMatch = aItems.find(function (oItem) {
+        return oItem.getBindingContext("template")?.getProperty("key") === sKey;
+      }) || aItems[0];
+
+      oList.removeSelections(true);
+      if (oMatch) {
+        oList.setSelectedItem(oMatch, true);
+      }
+    },
 
 
-        onTemplateDialogCancel: function () {
-        var oModel = this.getView().getModel("template");
 
-        if (this._oTemplateBackup) {
-            oModel.setProperty("/subject", this._oTemplateBackup.subject || "");
-            oModel.setProperty("/body", this._oTemplateBackup.body || "");
-            oModel.setProperty("/selectedLanguageKey", this._oTemplateBackup.selectedLanguageKey || "en");
-        }
+    // ======================================================================
+    // Formatter (Panel-Anzeige)
+    // ======================================================================
 
-        this._applyLanguageSelection();
-        this.byId("msgTemplateDialog").close();
-        },
+    formatTemplateSubject: function (sSubject) {
+      if (!sSubject || !sSubject.trim()) { return ""; }
+      return "<em>" + this._escapeHtml(sSubject.trim()) + "</em>";
+    },
 
-        onLanguageSelectionChange: function (oEvent) {
-            var oItem = oEvent.getParameter("listItem");
-            if (!oItem) { return; }
+    formatTemplateBody: function (sBody) {
+      if (!sBody || !sBody.trim()) { return ""; }
+      var s = this._escapeHtml(sBody.trim());
+      s = s.replace(/\r?\n/g, "<br/>");
+      return "<em>" + s + "</em>";
+    },
 
-            var sKey = oItem.getBindingContext("template").getProperty("key");
-            this.getView().getModel("template").setProperty("/selectedLanguageKey", sKey);
-        },
-
-        _applyLanguageSelection: function () {
-        var oList = this.byId("lstLanguages");
-        var oModel = this.getView().getModel("template");
-        if (!oList || !oModel) { return; }
-
-        var sKey = oModel.getProperty("/selectedLanguageKey") || "en";
-        var aItems = oList.getItems() || [];
-
-        // Fallback: erste Sprache, falls Key nicht gefunden
-        var oMatch = aItems.find(function (oItem) {
-            return oItem.getBindingContext("template")?.getProperty("key") === sKey;
-        }) || aItems[0];
-
-        oList.removeSelections(true);
-        if (oMatch) {
-            oList.setSelectedItem(oMatch, true);
-        }
-        },
-
-formatTemplateSubject: function (sSubject) {
-  if (!sSubject || !sSubject.trim()) {
-    return ""; // ✅ nichts anzeigen
-  }
-
-  var s = this._escapeHtml(sSubject.trim());
-  return "<em>" + s + "</em>";
-},
-
-formatTemplateBody: function (sBody) {
-  if (!sBody || !sBody.trim()) {
-    return ""; // ✅ nichts anzeigen
-  }
-
-  var s = this._escapeHtml(sBody.trim());
-  s = s.replace(/\r?\n/g, "<br/>");
-  return "<em>" + s + "</em>";
-},
-
-_escapeHtml: function (s) {
-  return String(s || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-},
+    _escapeHtml: function (s) {
+      return String(s || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    },
 
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------
         // ==========================================================
         // Panel komplett neu wenn User eine Rechnung selektiert
         // ==========================================================
         _onRouteMatched: function (oEvent) {
-            const sInvoiceId = oEvent.getParameter("arguments").invoiceId;
+            const sInvoiceId =  String(oEvent.getParameter("arguments").invoiceId).trim();
 
             // Layout sicherstellen
             const oMainViewModel = this.getView().getModel("mainView");
@@ -234,15 +292,23 @@ _escapeHtml: function (s) {
                 model: "backend"
             });
 
-            // ✅ Overview/Preview aktualisieren
-            this._refreshPanel();
+            //Template an die Rechnung binden
+      if (sInvoiceId) {
+        this._ensureTemplateForInvoice(sInvoiceId);
+        this._bindTemplateContexts(); // Panel + Dialog auf diese Rechnung binden
+      } else {
+        console.warn("Keine Rechnung mit ID", sInvoiceId, "gefunden – Template bleibt global.");
+      }
 
-            // ✅ HISTORY: Sofort laden beim Öffnen/Wechseln
-            this._loadHistoryLogs(true);
+      // ✅ Overview/Preview aktualisieren
+      this._refreshPanel();
 
-            // ✅ UploadSets/Listen neu aufbauen
-            this._rebuildLists();
-        },
+      // ✅ HISTORY: Sofort laden beim Öffnen/Wechseln
+      this._loadHistoryLogs(true);
+
+      // ✅ UploadSets/Listen neu aufbauen
+      this._rebuildLists();
+    },
 
         // ==========================================================
         // Panel neu wenn User Refresh Button mit offenem Panel drückt
@@ -389,6 +455,7 @@ onSendInvoice: async function () {
   const oAuth    = this.getOwnerComponent().getModel("auth");
   const oHistory = oView.getModel("history");
   const oModel   = this.getOwnerComponent().getModel("backend");
+  const oTemplate = oView.getModel("template");
 
   // ---------------------------
   // Helper: String → [{Address}]
@@ -444,8 +511,8 @@ onSendInvoice: async function () {
     Recipients: fnToAddressArray(sRecipient), // ✅ nur Address
     Cc: fnToAddressArray(sCc),
     Bcc: fnToAddressArray(sBcc),
-    Subject: "Testbetreff TKA",
-    Body: "Test TKA"
+    Subject: oTemplate.getProperty("/invoices/" + oTemplate.getProperty("/currentInvoiceKey") + "/subject"),
+    Body: oTemplate.getProperty("/invoices/" + oTemplate.getProperty("/currentInvoiceKey") + "/body") 
   };
 
   if (!oPayload.Recipients.length) {
@@ -484,6 +551,10 @@ onSendInvoice: async function () {
     oView.setBusy(false);
   }
 },
+
+//----------------------------------------------------------------------------------------------------Save-Button-----------------------------------------------------------------
+
+
 
     });
 });

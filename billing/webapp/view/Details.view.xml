@@ -97,26 +97,26 @@
 <!-- ================== Templates ================== -->
 <Title text="Templates" level="H4" class="sapUiMediumMarginTop" />
 
-<VBox class="sapUiSmallMarginTop">
+<VBox id="tplBox" class="sapUiSmallMarginTop">
 
-<!-- Subject -->
-<Label text="Subject" class="sapUiTinyMarginBottom" />
-<FormattedText
-    class="sapUiTinyMarginBottom"
-    htmlText="{path:'template>/subject', formatter: '.formatTemplateSubject'}" />
+   <!-- Subject -->
+   <Label text="Subject" class="sapUiTinyMarginBottom" />
+   <FormattedText
+      class="sapUiTinyMarginBottom"
+      htmlText="{path:'template>subject', formatter: '.formatTemplateSubject'}" />
 
-<!-- Body -->
-<Label text="Body" class="sapUiMediumMarginTop sapUiTinyMarginBottom" />
-<FormattedText
-    class="sapUiSmallMarginBottom"
-    htmlText="{path:'template>/body', formatter: '.formatTemplateBody'}" />
+   <!-- Body -->
+   <Label text="Body" class="sapUiMediumMarginTop sapUiTinyMarginBottom" />
+   <FormattedText
+      class="sapUiSmallMarginBottom"
+      htmlText="{path:'template>body', formatter: '.formatTemplateBody'}" />
 
-    <Button
-        text="Edit"
-        type="Emphasized"
-        class="sapUiTinyMarginTop"
-        width="3rem"
-        press=".onOpenTemplateDialog" />
+      <Button
+         text="Edit"
+         type="Emphasized"
+         class="sapUiTinyMarginTop"
+         width="3rem"
+         press=".onOpenTemplateDialog" />
 </VBox>
 <!-- ================================================= -->
 
