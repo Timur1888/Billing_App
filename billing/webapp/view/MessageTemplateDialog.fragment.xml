@@ -17,12 +17,12 @@
                     <Label text="Subject:"/>
                     <Input
                         placeholder="Placeholder"
-                        value="{template>/subject}"
+                        value="{template>subject}"
                         class="sapUiSmallMarginBottom" />
 
                     <Label text="Body:"/>
                     <TextArea
-                        value="{template>/body}"
+                        value="{template>body}"
                         rows="10"
                         width="100%"
                         placeholder="Write your message here." />
@@ -33,11 +33,13 @@
                     <List
                         id="lstLanguages"
                         mode="SingleSelect"
+                        selectionChange=".onLanguageSelectionChange"
                         items="{
                             path: 'template>/languages'
                         }">
                         <StandardListItem
-                            title="{template>name}" />
+                            title="{template>name}"
+                            type="Active" />
                     </List>
                 </VBox>
             </HBox>

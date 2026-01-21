@@ -8,7 +8,7 @@
         <customHeader>
             
             <OverflowToolbar id="otbHeader">
-                <Title id="hdrTitle" text="Billing"/>
+                <Title id="hdrTitle" text="Cockpit"/>
 
             <!-- Button wie im Screenshot: zeigt aktuelle Ansicht -->
             <Button
