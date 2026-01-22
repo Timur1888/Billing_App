@@ -1,51 +1,108 @@
-<mvc:View controllerName="billing.controller.View1"
+<mvc:View
+    controllerName="billing.controller.View1"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m"
-    xmlns:core="sap.ui.core">
+    xmlns:core="sap.ui.core"
+    xmlns:f="sap.f"
+    xmlns:fb="sap.ui.comp.filterbar">
 
-    <Page id="page" title="{i18n>title}">
-        
-        <customHeader>
-            
-            <OverflowToolbar id="otbHeader">
-                <Title id="hdrTitle" text="Billing"/>
+    <f:DynamicPage
+        id="dpBilling"
+        headerExpanded="true"
+        toggleHeaderOnTitleClick="true">
 
-            <!-- Button wie im Screenshot: zeigt aktuelle Ansicht -->
-            <Button
-                id="btnVariants"
-                type="Transparent"
-                icon="sap-icon://dropdown"
-                text="{variant>/currentViewName}"
-                press=".onOpenVariantPopover"
-                class="sapUiTinyMarginBegin"/>
+        <!-- ====== TITLE AREA (immer sichtbar) ====== -->
+        <f:title>
+            <f:DynamicPageTitle id="dptTitle">
 
-                <Button id="btnCreate" text="Create" type="Emphasized"
-                        class="myCreateBtn" press=".onCreate"/>
-                <Button id="btnDelete" icon="sap-icon://delete" press=".onDelete"
-                        tooltip="Delete selected" enabled="false"/>
-                <Button icon="sap-icon://refresh" press="onReload" type="Transparent"/>
+                <f:heading>
+                    <Title id="hdrTitle" text="Billing" />
+                </f:heading>
 
-                <ToolbarSpacer id="hdrSpacer"/>
+                <!-- Actions rechts wie vorher im OverflowToolbar -->
+                <f:actions>
 
-                <Button id="btnSettings" icon="sap-icon://action-settings" press=".onSettings"/>
-                <Button id="btnFilter" icon="sap-icon://filter" press=".onFilter"/>
+                    <Button
+                        id="btnCreate"
+                        text="Create"
+                        type="Emphasized"
+                        class="myCreateBtn"
+                        press=".onCreate" />
 
-                <SearchField id="sfSearch"
-                    width="18rem"
-                    placeholder="Search"
-                    search=".onSearch" />
-            </OverflowToolbar>
-        </customHeader>
+                    <Button
+                        id="btnDelete"
+                        icon="sap-icon://delete"
+                        press=".onDelete"
+                        tooltip="Delete selected"
+                        enabled="false" />
 
-        <content>
+                    <Button
+                        icon="sap-icon://refresh"
+                        press="onReload"
+                        type="Transparent" />
 
-            <!-- Aktive Filter-Chips -->
-            <Tokenizer
-                id="filterTokenizer"
-                visible="false"
-                editable="true"
-                tokenChange=".onFilterTokenChange"
-                class="sapUiSmallMargin" />
+                    <Button
+                        id="btnSettings"
+                        icon="sap-icon://action-settings"
+                        press=".onSettings" />
+                </f:actions>
+
+            </f:DynamicPageTitle>
+        </f:title>
+
+        <!-- ====== COLLAPSIBLE / PINNABLE HEADER ====== -->
+        <f:header>
+            <f:DynamicPageHeader id="dphHeader" pinnable="true">
+
+                <!-- Hier ist der Bereich wie im Screenshot (Filter + Search) -->
+                <fb:FilterBar
+                    id="fbBilling"
+                    showGoOnFB="true"
+                    showClearOnFB="true"
+                    filterBarExpanded="true"
+                    search=".onSearch"
+                    clear=".onClear">
+
+                    <fb:filterGroupItems>
+
+                        <!-- Quick Search (entspricht deinem SearchField) -->
+                        <fb:FilterGroupItem
+                            groupName="Group1"
+                            name="q"
+                            label="Search">
+                            <fb:control>
+                                <SearchField
+                                    id="sfSearch"
+                                    width="18rem"
+                                    placeholder="Search"
+                                    search=".onSearch" />
+                            </fb:control>
+                        </fb:FilterGroupItem>
+
+                        <!-- Beispiel-Filterfeld (kannst du ersetzen/erweitern) -->
+								<fb:FilterGroupItem name="Status" label="Status" groupName="Group1" visibleInFilterBar="true">
+									<fb:control>
+										<MultiComboBox
+											name="Status"
+											selectionChange=".onFilterSelectionChange"
+											items="{
+												path: 'backend>/value',
+												templateShareable: true
+											}"
+										>
+											<core:Item key="{key}" text="{name}"/>
+										</MultiComboBox>
+									</fb:control>
+								</fb:FilterGroupItem>
+
+                    </fb:filterGroupItems>
+                </fb:FilterBar>
+
+            </f:DynamicPageHeader>
+        </f:header>
+
+        <!-- ====== CONTENT ====== -->
+        <f:content>
 
             <Table
                 id="tblBilling"
@@ -80,6 +137,7 @@
                     <ColumnListItem type="Active">
                         <cells>
 
+                            
                             <!-- Status -->
                             <ObjectStatus
                                 text=""
@@ -92,7 +150,6 @@
                                     formatter: '.formatter.formatStatusState'
                                 }"
                             />
-
                             <!-- Recipient Name -->
                             <Text text="{backend>MetaData/Object/Data/Basics/Recipient/Name}" />
 
@@ -171,7 +228,8 @@
                     </ColumnListItem>
                 </items>
             </Table>
-        </content>
-    </Page>
+
+        </f:content>
+    </f:DynamicPage>
 
 </mvc:View>

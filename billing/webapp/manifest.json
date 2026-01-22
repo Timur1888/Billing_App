@@ -40,7 +40,10 @@
         "sap.m": {},
         "sap.ui.core": {},
         "sap.f": {},
-        "sap.ui.unified": {}
+        "sap.ui.unified": {},
+        "sap.ui.comp": {},
+        "sap.ui.fl": {},
+				"sap.ui.mdc": {}
       }
     },
     "contentDensities": {
