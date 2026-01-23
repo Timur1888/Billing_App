@@ -11,9 +11,8 @@ sap.ui.define([
     "sap/m/HBox",
     "sap/m/CheckBox",
     "sap/m/Popover",
-    "sap/m/PlacementType",
-    "billing/util/FilterHelper",
-    "billing/util/ViewsHelper"
+    "sap/m/library",
+    "sap/ui/comp/smartvariants/PersonalizableInfo"
 ], function (
     Controller,
     UIComponent,
@@ -27,9 +26,8 @@ sap.ui.define([
     HBox,
     CheckBox,
     Popover,
-    PlacementType,
-    FilterHelper,
-    ViewsHelper
+    mLibrary,
+    PersonalizableInfo
 ) {
     "use strict";
 
@@ -38,12 +36,281 @@ sap.ui.define([
         formatter: formatter,
 
         onInit: function () {
-            var oModel = this.getOwnerComponent().getModel("backend");
-            this._oBackendModel = oModel;
+            //Backend-Model
+            var oBackend = this.getOwnerComponent().getModel("backend");
+            this.getView().setModel(oBackend, "backend");
 
-            ViewsHelper.initVariantModel(this);
+            // ValueHelp-Model
+            this.getView().setModel(new JSONModel({
+                StatusList: [],
+                RecipientNameList: []
+            }), "fb");
+
+            this.applyData = this.applyData.bind(this);
+            this.fetchData = this.fetchData.bind(this);
+            this.getFiltersWithValues = this.getFiltersWithValues.bind(this);
+
+            //Controls einmal holen und als Property merken
+            this.oSmartVariantManagement = this.getView().byId("svm");
+            this.oExpandedLabel = this.getView().byId("expandedLabel");
+            this.oSnappedLabel = this.getView().byId("snappedLabel");
+
+            // XML: <fb:FilterBar id="filterbar" ...>
+            this.oFilterBar = this.getView().byId("filterbar");
+
+            this.oTable = this.getView().byId("tblBilling");
+
+            // Wenn Binding existiert: bei Änderungen ValueHelps neu bauen
+            var oItemsBinding = this.oTable && this.oTable.getBinding("items");
+            if (oItemsBinding) {
+                oItemsBinding.attachChange(this._rebuildValueHelps, this);
+            }
+            this._rebuildValueHelps();
+
+            // FilterBar mit Variant-Mechanik verbinden
+            this.oFilterBar.registerFetchData(this.fetchData);
+            this.oFilterBar.registerApplyData(this.applyData);
+            this.oFilterBar.registerGetFiltersWithValues(this.getFiltersWithValues);
+
+            // SmartVariantManagement “personalizable” machen
+            var oPersInfo = new PersonalizableInfo({
+                type: "filterBar",
+                keyName: "persistencyKey",
+                dataSource: "",
+                control: this.oFilterBar
+            });
+            this.oSmartVariantManagement.addPersonalizableControl(oPersInfo);
+
+            // Initialisieren (Startschuss)
+            this.oSmartVariantManagement.initialise(function () {}, this.oFilterBar);
         },
 
+        _rebuildValueHelps: function () {
+            var oBackend = this.getView().getModel("backend");
+            var oFb = this.getView().getModel("fb");
+            if (!oBackend || !oFb) { return; }
+
+            var aRows = oBackend.getProperty("/value") || [];
+
+            // Unique via Map/Object
+            var mStates = Object.create(null);
+            var mNames  = Object.create(null);
+
+            aRows.forEach(function (r) {
+                var sState = r && r.State;
+                if (sState) { mStates[sState] = true; }
+
+                var sName = r?.MetaData?.Object?.Data?.Basics?.Recipient?.Name;
+                if (sName) { mNames[sName] = true; }
+            });
+
+            oFb.setProperty("/StatusList",
+                Object.keys(mStates).sort().map(s => ({ key: s, text: s }))
+            );
+
+            oFb.setProperty("/RecipientNameList",
+                Object.keys(mNames).sort().map(s => ({ key: s, text: s }))
+            );
+        },
+
+		onExit: function() {
+			this.oModel = null;
+			this.oSmartVariantManagement = null;
+			this.oExpandedLabel = null;
+			this.oSnappedLabel = null;
+			this.oFilterBar = null;
+			this.oTable = null;
+		},
+
+        fetchData: function () {
+        return this.oFilterBar.getAllFilterItems().reduce(function (aResult, oFilterItem) {
+            var oControl = oFilterItem.getControl();
+            var vData;
+
+            if (oControl && oControl.getSelectedKeys) {
+            vData = oControl.getSelectedKeys();           // MultiComboBox
+            } else if (oControl && oControl.getValue) {
+            vData = oControl.getValue();                  // SearchField/Input
+            } else {
+            vData = null;                                 // fallback
+            }
+
+            aResult.push({
+            groupName: oFilterItem.getGroupName(),
+            fieldName: oFilterItem.getName(),
+            fieldData: vData
+            });
+
+            return aResult;
+        }, []);
+        },
+
+        applyData: function (aData) {
+        aData.forEach(function (oDataObject) {
+            var oControl = this.oFilterBar.determineControlByName(oDataObject.fieldName, oDataObject.groupName);
+            if (!oControl) { return; }
+
+            if (oControl.setSelectedKeys && Array.isArray(oDataObject.fieldData)) {
+            oControl.setSelectedKeys(oDataObject.fieldData);
+            } else if (oControl.setValue && typeof oDataObject.fieldData === "string") {
+            oControl.setValue(oDataObject.fieldData);
+            }
+        }, this);
+        },
+
+        getFiltersWithValues: function () {
+        return this.oFilterBar.getFilterGroupItems().reduce(function (aResult, oFilterGroupItem) {
+            var oControl = oFilterGroupItem.getControl();
+
+            if (oControl && oControl.getSelectedKeys && oControl.getSelectedKeys().length > 0) {
+            aResult.push(oFilterGroupItem);
+            } else if (oControl && oControl.getValue && oControl.getValue().trim().length > 0) {
+            aResult.push(oFilterGroupItem);
+            }
+
+            return aResult;
+        }, []);
+        },
+
+		onSFilterSelectionChange: function (oEvent) {
+			this.oSmartVariantManagement.currentVariantSetModified(true);
+			this.oFilterBar.fireFilterChange(oEvent);
+		},
+
+onSearch: function () {
+  var oBinding = this.oTable.getBinding("items");
+  if (!oBinding) { return; }
+
+  // Welche Felder sollen global durchsucht werden?
+  var aSearchPaths = [
+    "MetaData/Object/Data/Basics/Number/Value",
+    "MetaData/Object/Data/Basics/Recipient/Name",
+    "MetaData/Object/Data/Basics/Recipient/Email/0/Address",
+    "MetaData/Object/Data/BusinessPartners/1/LeitwegId/Value",
+    "MetaData/Object/Data/BusinessPartners/0/SalesOrganisation/Value"
+  ];
+
+  // 1) SearchField (global)
+  var oSearchFGI = this.oFilterBar.getFilterGroupItems().find(function (oFGI) {
+    return oFGI.getName() === "Search";
+  });
+  var sQuery = "";
+  if (oSearchFGI && oSearchFGI.getControl() && oSearchFGI.getControl().getValue) {
+    sQuery = (oSearchFGI.getControl().getValue() || "").trim();
+  }
+
+  // 2) MultiComboBox Filter (State, RecipientName, etc.) -> falls du sie weiter nutzen willst
+  var mFieldToPath = {
+    State: "State",
+    RecipientName: "MetaData/Object/Data/Basics/Recipient/Name"
+  };
+
+  var aFilters = [];
+
+  // A) global SearchFilter bauen (OR über mehrere Felder)
+  var oGlobalFilter = this._buildWildcardSearchFilter(sQuery, aSearchPaths);
+  if (oGlobalFilter) {
+    aFilters.push(oGlobalFilter);
+  }
+
+  // B) restliche FilterGroupItems (MultiComboBox)
+  this.oFilterBar.getFilterGroupItems().forEach(function (oFGI) {
+    var sName = oFGI.getName();
+    if (sName === "Search") { return; }
+
+    var oControl = oFGI.getControl();
+    if (!oControl || !oControl.getSelectedKeys) { return; }
+
+    var aKeys = oControl.getSelectedKeys();
+    var sPath = mFieldToPath[sName];
+    if (!sPath || aKeys.length === 0) { return; }
+
+    aFilters.push(new sap.ui.model.Filter({
+      filters: aKeys.map(function (sKey) {
+        return new sap.ui.model.Filter(sPath, sap.ui.model.FilterOperator.Contains, sKey);
+      }),
+      and: false
+    }));
+  });
+
+  // C) Alles gemeinsam anwenden (AND zwischen global + einzelnen Feldern)
+  oBinding.filter(aFilters);
+  this.oTable.setShowOverlay(false);
+},
+
+
+//Ermöglicht die Suche mit *
+_buildWildcardSearchFilter: function (sQuery, aPaths) {
+  if (!sQuery) { return null; }
+
+  var s = (sQuery || "").trim();
+  if (!s) { return null; }
+
+  // entferne Rand-* und ignoriere Query nur aus Sternen
+  var sCore = s.replace(/^\*+/, "").replace(/\*+$/, "");
+  if (!sCore) { return null; }
+
+  // ROBUST: immer Contains, damit JSONModel + Nested Paths sicher matchen
+  var op = sap.ui.model.FilterOperator.Contains;
+
+  return new sap.ui.model.Filter({
+    filters: aPaths.map(function (sPath) {
+      return new sap.ui.model.Filter(sPath, op, sCore);
+    }),
+    and: false
+  });
+},
+
+		onFilterChange: function () {
+			this._updateLabelsAndTable();
+		},
+
+		onAfterVariantLoad: function () {
+			this._updateLabelsAndTable();
+		},
+
+		getFormattedSummaryText: function() {
+			var aFiltersWithValues = this.oFilterBar.retrieveFiltersWithValues();
+
+			if (aFiltersWithValues.length === 0) {
+				return "No filters active";
+			}
+
+			if (aFiltersWithValues.length === 1) {
+				return aFiltersWithValues.length + " filter active: " + aFiltersWithValues.join(", ");
+			}
+
+			return aFiltersWithValues.length + " filters active: " + aFiltersWithValues.join(", ");
+		},
+
+		getFormattedSummaryTextExpanded: function() {
+			var aFiltersWithValues = this.oFilterBar.retrieveFiltersWithValues();
+
+			if (aFiltersWithValues.length === 0) {
+				return "No filters active";
+			}
+
+			var sText = aFiltersWithValues.length + " filters active",
+				aNonVisibleFiltersWithValues = this.oFilterBar.retrieveNonVisibleFiltersWithValues();
+
+			if (aFiltersWithValues.length === 1) {
+				sText = aFiltersWithValues.length + " filter active";
+			}
+
+			if (aNonVisibleFiltersWithValues && aNonVisibleFiltersWithValues.length > 0) {
+				sText += " (" + aNonVisibleFiltersWithValues.length + " hidden)";
+			}
+
+			return sText;
+		},
+
+		_updateLabelsAndTable: function () {
+			this.oExpandedLabel.setText(this.getFormattedSummaryTextExpanded());
+			this.oSnappedLabel.setText(this.getFormattedSummaryText());
+			this.oTable.setShowOverlay(true);
+		},
+
+//:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
         onCreate: function () {},
 
@@ -139,69 +406,6 @@ sap.ui.define([
         },
 
         // ---------------------------------------------------
-        // Suche
-        // ---------------------------------------------------
-        onSearch: function (oEvent) {
-            const sQuery = oEvent.getParameter("query")?.trim().toLowerCase();
-            const oTable = this.byId("tblBilling");
-            const oBinding = oTable.getBinding("items");
-
-            if (!oBinding) {
-                return;
-            }
-
-            if (!sQuery) {
-                oBinding.filter([]);
-                return;
-            }
-
-            const aFilters = [
-                new Filter({
-                    path: "MetaData/Object/Data/Basics/Number/Value",
-                    operator: FilterOperator.Contains,
-                    value1: sQuery
-                }),
-                new Filter({
-                    path: "MetaData/Object/Data/Basics/Recipient/Name",
-                    operator: FilterOperator.Contains,
-                    value1: sQuery
-                }),
-                new Filter({
-                    path: "MetaData/Object/Data/Basics/Recipient/Email/0/Address",
-                    operator: FilterOperator.Contains,
-                    value1: sQuery
-                })
-            ];
-
-            const oCombinedFilter = new Filter({
-                filters: aFilters,
-                and: false
-            });
-
-            const aData = this.getOwnerComponent()
-                .getModel("backend")
-                .getProperty("/value") || [];
-
-            const aMatches = aData.filter(item => {
-                const invoice = String(item.MetaData?.Object?.Data?.Basics?.Number?.Value || "").toLowerCase();
-                const name    = String(item.MetaData?.Object?.Data?.Basics?.Recipient?.Name || "").toLowerCase();
-                const email   = String(item.MetaData?.Object?.Data?.Basics?.Recipient?.Email?.[0]?.Address || "").toLowerCase();
-
-                return (
-                    invoice.includes(sQuery) ||
-                    name.includes(sQuery)    ||
-                    email.includes(sQuery)
-                );
-            });
-
-            if (aMatches.length === 0) {
-                return;
-            }
-
-            oBinding.filter(oCombinedFilter);
-        },
-
-        // ---------------------------------------------------
         // Navigation zur Detailseite
         // ---------------------------------------------------
         onInvoicePress: function (oEvent) {
@@ -222,43 +426,6 @@ sap.ui.define([
             oRouter.navTo("DetailsRoute", {
                 invoiceId: sInvoiceId
             });
-        },
-
-        // ---------------------------------------------------
-        // Filter-Button & Dialog
-        // ---------------------------------------------------
-        onFilter: function (oEvent) {
-            const oPopover = FilterHelper.createFilterPopover(this);
-            oPopover.openBy(oEvent.getSource());
-        },
-
-        onAddFilterPress: function () {
-            if (this._oFilterPopover) {
-                this._oFilterPopover.close();
-            }
-            FilterHelper.openFilterDialog(this);
-        },
-
-        onFilterFieldChange: function (oEvent) {
-            FilterHelper.onFilterFieldChange(this, oEvent);
-        },
-
-        onFilterRowDelete: function (oEvent) {
-            FilterHelper.onFilterRowDelete(this, oEvent);
-        },
-
-        onFilterDialogSave: function () {
-            FilterHelper.onFilterDialogSave(this);
-        },
-
-        onFilterDialogCancel: function () {
-            if (this._oFilterDialog) {
-                this._oFilterDialog.close();
-            }
-        },
-
-        onFilterTokenChange: function (oEvent) {
-            FilterHelper.onFilterTokenChange(this, oEvent);
         },
 
         // ---------------------------------------------------
@@ -294,7 +461,7 @@ sap.ui.define([
             });
 
             this._oColumnPopover = new Popover({
-                placement: PlacementType.Bottom,
+                placement: mLibrary.Bottom,
                 title: "Columns",
                 contentWidth: "250px",
                 content: oList
@@ -309,68 +476,7 @@ sap.ui.define([
             const oPopover = this._createColumnSettingsPopover();
             oPopover.openBy(oEvent.getSource());
         },
-        // ---------------------------------------------------
-        // Variant UI-Handler -> Helper
-        // ---------------------------------------------------
-                onOpenVariantPopover: function (oEvent) {
-            ViewsHelper.openVariantPopover(this, oEvent);
-        },
-
-        _ensureAtLeastOneView: function () {
-            ViewsHelper.ensureAtLeastOneView(this);
-        },
-
-        onOpenManageDialog: function () {
-            ViewsHelper.openManageDialog(this);
-        },
-
-        onCloseManageDialog: function () {
-            ViewsHelper.closeManageDialog(this);
-        },
-
-        onVariantDelete: function (oEvent) {
-            ViewsHelper.variantDelete(this, oEvent);
-        },
-
-        onVariantDefaultToggle: function (oEvent) {
-            ViewsHelper.variantDefaultToggle(this, oEvent);
-        },
-
-        onCloseVariantDialog: function () {
-            ViewsHelper.closeVariantDialog(this);
-        },
-
-        onVariantSelected: function (oEvent) {
-            ViewsHelper.variantSelected(this, oEvent);
-        },
-
-        _applyState: function (oState) {
-            ViewsHelper.applyState(this, oState);
-        },
-
-        onManageSearch: function (oEvent) {
-            ViewsHelper.manageSearch(this, oEvent);
-        },
-
-        onSaveViewAs: function () {
-            ViewsHelper.saveViewAs(this);
-        },
-
-        onCancelSaveView: function () {
-            ViewsHelper.cancelSaveView(this);
-        },
-
-        onConfirmSaveView: function () {
-            ViewsHelper.confirmSaveView(this);
-        },
-
-        _getCurrentState: function () {
-            return ViewsHelper.getCurrentState(this);
-        },
-
-        onManageSave: function () {
-            ViewsHelper.manageSave(this);
-        }
+ 
 
     });
 });
