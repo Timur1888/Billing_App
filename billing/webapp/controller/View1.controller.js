@@ -12,7 +12,7 @@ sap.ui.define([
     "sap/m/CheckBox",
     "sap/m/Popover",
     "sap/m/library",
-    "sap/ui/comp/smartvariants/PersonalizableInfo"
+    "sap/ui/comp/smartvariants/PersonalizableInfo", "sap/ui/model/type/String", "sap/m/Label", "sap/m/SearchField", "sap/m/Token", "sap/ui/table/Column", "sap/m/Column", "sap/m/Text", "sap/ui/comp/library"
 ], function (
     Controller,
     UIComponent,
@@ -27,7 +27,7 @@ sap.ui.define([
     CheckBox,
     Popover,
     mLibrary,
-    PersonalizableInfo
+    PersonalizableInfo, TypeString, Label, SearchField, Token, UIColumn, MColumn, Text, compLibrary
 ) {
     "use strict";
 
@@ -36,6 +36,7 @@ sap.ui.define([
         formatter: formatter,
 
         onInit: function () {
+            //--------------------------------------------------
             //Backend-Model
             var oBackend = this.getOwnerComponent().getModel("backend");
             this.getView().setModel(oBackend, "backend");
@@ -43,9 +44,12 @@ sap.ui.define([
             // ValueHelp-Model
             this.getView().setModel(new JSONModel({
                 StatusList: [],
-                RecipientNameList: []
+                RecipientNameList: [],
+                InvoiceNumberList: []
             }), "fb");
+            //--------------------------------------------------
 
+            //--------------------------------------------------
             this.applyData = this.applyData.bind(this);
             this.fetchData = this.fetchData.bind(this);
             this.getFiltersWithValues = this.getFiltersWithValues.bind(this);
@@ -83,35 +87,213 @@ sap.ui.define([
 
             // Initialisieren (Startschuss)
             this.oSmartVariantManagement.initialise(function () {}, this.oFilterBar);
+            //--------------------------------------------------
+
+            //--------------------------------------------------
+            var oMultiInput;
+            // Value Help Dialog standard use case with filter bar without filter suggestions
+			oMultiInput = this.byId("multiInput");
+			oMultiInput.addValidator(this._onMultiInputValidate);
+			this._oMultiInput = oMultiInput;
+
+            //--------------------------------------------------
         },
 
+// --- VALUE HELP: Invoice .No -------------
+		// #region Value Help Dialog standard use case with filter bar without filter suggestions
+		onValueHelpRequested: function() {
+			this._oBasicSearchField = new SearchField();
+			this.loadFragment({
+				name: "billing.view.fragments.VH_InvoiceNo"
+			}).then(function(oDialog) {
+				var oFilterBar = oDialog.getFilterBar(), oColumnInvoiceNo, oColumnRecipientName;
+				this._oVHD = oDialog;
+
+				this.getView().addDependent(oDialog);
+
+				// Set key fields for filtering in the Define Conditions Tab
+				oDialog.setRangeKeyFields([{
+					label: "Invoice .No",
+					key: "InvoiceNo",
+					type: "string",
+					typeInstance: new TypeString({}, {})
+				}]);
+
+				// Set Basic Search for FilterBar
+				oFilterBar.setFilterBarExpanded(false);
+				oFilterBar.setBasicSearch(this._oBasicSearchField);
+
+				// Trigger filter bar search when the basic search is fired
+				this._oBasicSearchField.attachSearch(function() {
+					oFilterBar.search();
+				});
+
+				oDialog.getTableAsync().then(function (oTable) {
+
+					oTable.setModel(this.getView().getModel("fb"), "fb");
+
+					// For Desktop and tabled the default table is sap.ui.table.Table
+					if (oTable.bindRows) {
+						// Bind rows to the ODataModel and add columns
+						oTable.bindAggregation("rows", {
+							path: "fb>/InvoiceNumberList",
+							events: {
+								dataReceived: function() {
+									oDialog.update();
+								}
+							}
+						});
+						oColumnInvoiceNo = new UIColumn({label: new Label({text: "Invoice No."}), template: new Text({wrapping: false, text: "{fb>InvoiceNo}"})});
+						oColumnInvoiceNo.data({
+							fieldName: "InvoiceNo"
+						});
+						oColumnRecipientName = new UIColumn({label: new Label({text: "Recipient Name"}), template: new Text({wrapping: false, text: "{fb>RecipientName}"})});
+						oColumnRecipientName.data({
+							fieldName: "RecipientName"
+						});
+						oTable.addColumn(oColumnInvoiceNo);
+						oTable.addColumn(oColumnRecipientName);
+					}
+
+					// For Mobile the default table is sap.m.Table
+					if (oTable.bindItems) {
+						// Bind items to the ODataModel and add columns
+						oTable.bindAggregation("items", {
+							path: "fb>/InvoiceNumberList",
+							template: new ColumnListItem({
+								cells: [new Label({text: "Invoice No."}), new Label({text: "{fb>InvoiceNo}"})]
+							}),
+							events: {
+								dataReceived: function() {
+									oDialog.update();
+								}
+							}
+						});
+						oTable.addColumn(new MColumn({header: new Label({text: "Invoice No."})}));
+						oTable.addColumn(new MColumn({header: new Label({text: "Recipient Name"})}));
+					}
+					oDialog.update();
+				}.bind(this));
+
+				oDialog.setTokens(this._oMultiInput.getTokens());
+				oDialog.open();
+			}.bind(this));
+		},
+
+onValueHelpOkPress: function (oEvent) {
+    var aTokens = oEvent.getParameter("tokens");
+    this._oMultiInput.setTokens(aTokens);
+    this._oVHD.close();
+},
+
+onValueHelpCancelPress: function () {
+    this._oVHD.close();
+},
+
+onValueHelpAfterClose: function () {
+    this._oVHD.destroy();
+},
+
+		// #endregion
+		onFilterBarSearch: function (oEvent) {
+			var sSearchQuery = this._oBasicSearchField.getValue(),
+				aSelectionSet = oEvent.getParameter("selectionSet");
+
+			var aFilters = aSelectionSet.reduce(function (aResult, oControl) {
+				if (oControl.getValue()) {
+					aResult.push(new Filter({
+						path: oControl.getName(),
+						operator: FilterOperator.Contains,
+						value1: oControl.getValue()
+					}));
+				}
+
+				return aResult;
+			}, []);
+
+			aFilters.push(new Filter({
+				filters: [
+					new Filter({ path: "InvoiceNo", operator: FilterOperator.Contains, value1: sSearchQuery }),
+					new Filter({ path: "RecipientName", operator: FilterOperator.Contains, value1: sSearchQuery })
+				],
+				and: false
+			}));
+
+			this._filterTable(new Filter({
+				filters: aFilters,
+				and: true
+			}));
+		},
+
+        // @endregion
+            _onMultiInputValidate: function (oArgs) {
+            if (oArgs.suggestionObject) {
+                var o = oArgs.suggestionObject.getBindingContext("fb").getObject();
+                return new Token({
+                key: o.InvoiceNo,
+                text: o.InvoiceNo + " (" + o.RecipientName + ")"
+                });
+            }
+            return null;
+            },
+		_filterTable: function (oFilter) {
+			var oVHD = this._oVHD;
+
+			oVHD.getTableAsync().then(function (oTable) {
+				if (oTable.bindRows) {
+					oTable.getBinding("rows").filter(oFilter);
+				}
+				if (oTable.bindItems) {
+					oTable.getBinding("items").filter(oFilter);
+				}
+
+				// This method must be called after binding update of the table.
+				oVHD.update();
+			});
+		},
+
+//----------------------------------------------------------------------------------------------------------------Drop Down Status und Recipent name--------------------------
+        //WICHTIG, Falls ein neuer Filter dazukommt, hier ein neues Property für diesen Filter erstellen. Oder Property löschen falls ein bestehender Fileter gelöscht werden muss
         _rebuildValueHelps: function () {
-            var oBackend = this.getView().getModel("backend");
-            var oFb = this.getView().getModel("fb");
-            if (!oBackend || !oFb) { return; }
+        var oBackend = this.getView().getModel("backend");
+        var oFb      = this.getView().getModel("fb");
+        if (!oBackend || !oFb) { return; }
 
-            var aRows = oBackend.getProperty("/value") || [];
+        var aRows = oBackend.getProperty("/value") || [];
 
-            // Unique via Map/Object
-            var mStates = Object.create(null);
-            var mNames  = Object.create(null);
+        var mStates = Object.create(null);
+        var mNames  = Object.create(null);
+        var mInv    = Object.create(null); // key = InvoiceNo, value = {InvoiceNo, RecipientName}
 
-            aRows.forEach(function (r) {
-                var sState = r && r.State;
-                if (sState) { mStates[sState] = true; }
+        aRows.forEach(function (r) {
+            var sState = r && r.State;
+            if (sState) { mStates[sState] = true; }
 
-                var sName = r?.MetaData?.Object?.Data?.Basics?.Recipient?.Name;
-                if (sName) { mNames[sName] = true; }
-            });
+            var sName = r?.MetaData?.Object?.Data?.Basics?.Recipient?.Name || "";
+            if (sName) { mNames[sName] = true; }
 
-            oFb.setProperty("/StatusList",
-                Object.keys(mStates).sort().map(s => ({ key: s, text: s }))
-            );
+            var sInv = r?.MetaData?.Object?.Data?.Basics?.Number?.Value;
+            if (sInv != null && sInv !== "") {
+            var sInvStr = "" + sInv;           // <-- keine String()-Funktion nötig
+            if (!mInv[sInvStr]) {
+                mInv[sInvStr] = { InvoiceNo: sInvStr, RecipientName: sName };
+            }
+            }
+        });
 
-            oFb.setProperty("/RecipientNameList",
-                Object.keys(mNames).sort().map(s => ({ key: s, text: s }))
-            );
+        oFb.setProperty("/StatusList",
+            Object.keys(mStates).sort().map(function (s) { return { key: s, text: s }; })
+        );
+
+        oFb.setProperty("/RecipientNameList",
+            Object.keys(mNames).sort().map(function (s) { return { key: s, text: s }; })
+        );
+
+        oFb.setProperty("/InvoiceNumberList",
+            Object.keys(mInv).sort().map(function (k) { return mInv[k]; })
+        );
         },
+
 
 		onExit: function() {
 			this.oModel = null;
@@ -120,6 +302,7 @@ sap.ui.define([
 			this.oSnappedLabel = null;
 			this.oFilterBar = null;
 			this.oTable = null;
+           
 		},
 
         fetchData: function () {

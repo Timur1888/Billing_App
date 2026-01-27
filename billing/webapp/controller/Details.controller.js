@@ -37,7 +37,7 @@ sap.ui.define([
             // Dialog lazy laden
             if (!this._oTemplateDialog) {
                 Fragment.load({
-                    name: "billing.view.MessageTemplateDialog",
+                    name: "billing.view.fragments.MessageTemplateDialog",
                     controller: this
                 }).then(function (oDialog) {
                     this._oTemplateDialog = oDialog;

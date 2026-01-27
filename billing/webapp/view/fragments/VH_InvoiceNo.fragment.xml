@@ -1,0 +1,53 @@
+<core:FragmentDefinition
+    xmlns="sap.ui.comp.valuehelpdialog"
+    xmlns:m="sap.m"
+    xmlns:fb="sap.ui.comp.filterbar"
+    xmlns:core="sap.ui.core">
+
+    <ValueHelpDialog
+        
+        title="Invoice No."
+        ok=".onValueHelpOkPress"
+        cancel=".onValueHelpCancelPress"
+        afterClose=".onValueHelpAfterClose"
+        supportRanges="true"
+        key="InvoiceNo"
+        descriptionKey="RecipientName">
+
+        <filterBar>
+            <fb:FilterBar
+                id="fbVhInvoiceNo"
+                advancedMode="true"
+                search=".onFilterBarSearch"
+                isRunningInValueHelpDialog="true">
+
+                <fb:filterGroupItems>
+
+                    <fb:FilterGroupItem
+                        id="fgiVhInvoiceNo"
+                        groupName="__$INTERNAL$"
+                        name="InvoiceNo"
+                        label="Invoice No."
+                        visibleInFilterBar="true">
+                        <fb:control>
+                            <m:Input id="inpVhInvoiceNo" name="InvoiceNo" />
+                        </fb:control>
+                    </fb:FilterGroupItem>
+
+                    <fb:FilterGroupItem
+                        id="fgiVhRecipientName"
+                        groupName="__$INTERNAL$"
+                        name="RecipientName"
+                        label="Recipient Name"
+                        visibleInFilterBar="true">
+                        <fb:control>
+                            <m:Input id="inpVhRecipientName" name="RecipientName" />
+                        </fb:control>
+                    </fb:FilterGroupItem>
+
+                </fb:filterGroupItems>
+            </fb:FilterBar>
+        </filterBar>
+
+    </ValueHelpDialog>
+</core:FragmentDefinition>

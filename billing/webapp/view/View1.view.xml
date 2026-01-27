@@ -67,7 +67,6 @@
                useToolbar="false" search=".onSearch" 
                filterChange=".onFilterChange" 
                afterVariantLoad=".onAfterVariantLoad">
-
                     <fb:filterGroupItems>
 
                         <!-- Quick Search (entspricht deinem SearchField) -->
@@ -88,7 +87,7 @@
 
                         
 
-                        
+                        <!-- ====== Status ====== -->
                         <fb:FilterGroupItem
                             id="fgiStatus"
                             name="State"
@@ -105,7 +104,7 @@
                             </MultiComboBox>
                             </fb:control>
                         </fb:FilterGroupItem>
-
+                        <!-- ====== Recipient name ====== -->
                         <fb:FilterGroupItem
                             id="fgiRecipientName"
                             name="RecipientName"
@@ -123,6 +122,43 @@
                             </fb:control>
                         </fb:FilterGroupItem>
 
+                        <!-- ====== InvoiceNo ====== -->
+                        <fb:FilterGroupItem
+                        id="fgiInvoiceNo"
+                        name="InvoiceNo"
+                        label="Invoice No."
+                        groupName="Group1"
+                        visibleInFilterBar="true">
+                        <fb:control>
+
+                        <MultiInput
+                            id="multiInput"
+                            width="60%"
+                            valueHelpRequest=".onValueHelpRequested"
+                            suggestionRows="{
+                                path: 'fb>/InvoiceNumberList',
+                                length: 10
+                            }">
+                            <suggestionColumns>
+                                <Column id="colSugInvNo">
+                                    <Label id="lblSugInvNo" text="Invoice No."/>
+                                </Column>
+                                <Column id="colSugInvRecName">
+                                    <Label id="lblSugInvRecName" text="Recipient Name"/>
+                                </Column>
+                            </suggestionColumns>
+
+                            <suggestionRows>
+                                <ColumnListItem id="cliSugInvNo">
+                                    <Label id="lblSugInvNoVal" text="{fb>InvoiceNo}" />
+                                    <Label id="lblSugInvRecNameVal" text="{fb>RecipientName}" />
+                                </ColumnListItem>
+                            </suggestionRows>
+                        </MultiInput>
+
+                        </fb:control>
+                    </fb:FilterGroupItem>
+                        
                     </fb:filterGroupItems>
                 </fb:FilterBar>
         </f:content>
