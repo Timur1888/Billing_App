@@ -345,20 +345,22 @@ onValueHelpAfterClose: function () {
         return this.oFilterBar.getFilterGroupItems().reduce(function (aResult, oFilterGroupItem) {
             var oControl = oFilterGroupItem.getControl();
 
+            // MultiComboBox / Controls mit SelectedKeys
             if (oControl && oControl.getSelectedKeys && oControl.getSelectedKeys().length > 0) {
             aResult.push(oFilterGroupItem);
+
+            // Input / SearchField / Controls mit Value
             } else if (oControl && oControl.getValue && oControl.getValue().trim().length > 0) {
+            aResult.push(oFilterGroupItem);
+
+            // ✅ MultiInput: Tokens zählen als "Filter hat Wert"
+            } else if (oControl && oControl.getTokens && oControl.getTokens().length > 0) {
             aResult.push(oFilterGroupItem);
             }
 
             return aResult;
         }, []);
         },
-
-		onSFilterSelectionChange: function (oEvent) {
-			this.oSmartVariantManagement.currentVariantSetModified(true);
-			this.oFilterBar.fireFilterChange(oEvent);
-		},
 
 onSearch: function () {
   var oBinding = this.oTable.getBinding("items");
@@ -468,6 +470,8 @@ _buildWildcardSearchFilter: function (sQuery, aPaths) {
   });
 },
 
+
+
 		onFilterChange: function () {
 			this._updateLabelsAndTable();
 		},
@@ -516,6 +520,19 @@ _buildWildcardSearchFilter: function (sQuery, aPaths) {
 			this.oSnappedLabel.setText(this.getFormattedSummaryText());
 			this.oTable.setShowOverlay(true);
 		},
+		onFilterSelectionChange: function (oEvent) {
+            this.oSmartVariantManagement.currentVariantSetModified(true);
+			this.oFilterBar.fireFilterChange(oEvent);
+		},
+        onInvoiceNoTokenUpdate: function (oEvent) {
+            this.oSmartVariantManagement.currentVariantSetModified(true);
+
+            // wichtig: FilterBar muss wissen "Filter haben sich geändert"
+            this.oFilterBar.fireFilterChange(oEvent);
+
+            // optional: wenn du direkt filtern willst (wie bei Search)
+            // this.onSearch();
+        },
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 

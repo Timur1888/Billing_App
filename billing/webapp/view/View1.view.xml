@@ -135,6 +135,7 @@
                             id="multiInput"
                             width="60%"
                             valueHelpRequest=".onValueHelpRequested"
+                            tokenChange=".onInvoiceNoTokenUpdate"
                             suggestionRows="{
                                 path: 'fb>/InvoiceNumberList',
                                 length: 10
