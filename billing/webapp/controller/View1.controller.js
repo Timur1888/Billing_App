@@ -385,7 +385,8 @@ onSearch: function () {
   // 2) MultiComboBox Filter (State, RecipientName, etc.) -> falls du sie weiter nutzen willst
   var mFieldToPath = {
     State: "State",
-    RecipientName: "MetaData/Object/Data/Basics/Recipient/Name"
+    RecipientName: "MetaData/Object/Data/Basics/Recipient/Name",
+    InvoiceNo: "MetaData/Object/Data/Basics/Number/Value"
   };
 
   var aFilters = [];
@@ -396,17 +397,19 @@ onSearch: function () {
     aFilters.push(oGlobalFilter);
   }
 
-  // B) restliche FilterGroupItems (MultiComboBox)
-  this.oFilterBar.getFilterGroupItems().forEach(function (oFGI) {
-    var sName = oFGI.getName();
-    if (sName === "Search") { return; }
+// B) restliche FilterGroupItems (MultiComboBox + MultiInput)
+this.oFilterBar.getFilterGroupItems().forEach(function (oFGI) {
+  var sName = oFGI.getName();
+  if (sName === "Search") { return; }
 
-    var oControl = oFGI.getControl();
-    if (!oControl || !oControl.getSelectedKeys) { return; }
+  var oControl = oFGI.getControl();
+  var sPath = mFieldToPath[sName];
+  if (!sPath) { return; }
 
+  // ---- 1) MultiComboBox (wie bisher) ----
+  if (oControl && oControl.getSelectedKeys) {
     var aKeys = oControl.getSelectedKeys();
-    var sPath = mFieldToPath[sName];
-    if (!sPath || aKeys.length === 0) { return; }
+    if (!aKeys || aKeys.length === 0) { return; }
 
     aFilters.push(new sap.ui.model.Filter({
       filters: aKeys.map(function (sKey) {
@@ -414,7 +417,28 @@ onSearch: function () {
       }),
       and: false
     }));
-  });
+    return;
+  }
+
+  // ---- 2) MultiInput (Tokens wie SelectedKeys behandeln) ----
+  if (oControl && oControl.getTokens) {
+    var aTokenKeys = (oControl.getTokens() || [])
+      .map(function (t) { return t && t.getKey ? (t.getKey() || "").trim() : ""; })
+      .filter(Boolean);
+
+    if (aTokenKeys.length === 0) { return; }
+
+    // Wichtig: bei InvoiceNo meistens EXAKT matchen (EQ).
+    // Wenn deine Daten nicht exakt matchen: auf Contains wechseln.
+    aFilters.push(new sap.ui.model.Filter({
+      filters: aTokenKeys.map(function (sKey) {
+        return new sap.ui.model.Filter(sPath, sap.ui.model.FilterOperator.Contains, sKey);
+      }),
+      and: false
+    }));
+    return;
+  }
+});
 
   // C) Alles gemeinsam anwenden (AND zwischen global + einzelnen Feldern)
   oBinding.filter(aFilters);
