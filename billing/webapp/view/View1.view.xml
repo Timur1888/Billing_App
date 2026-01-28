@@ -68,7 +68,7 @@
                filterChange=".onFilterChange" 
                afterVariantLoad=".onAfterVariantLoad">
                     <fb:filterGroupItems>
-                    
+
                         <!-- Quick Search  -->
                         <fb:FilterGroupItem
                             id="fgiQuickSearch"
@@ -136,7 +136,7 @@
                         <fb:control>
 
                         <MultiInput
-                            id="multiInput"
+                            id="multiInputInvNo"
                             width="60%"
                             valueHelpRequest=".onValueHelpRequested"
                             tokenChange=".onInvoiceNoTokenUpdate"

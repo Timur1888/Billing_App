@@ -94,7 +94,7 @@ sap.ui.define([
             //--------------------------------------------------
             var oMultiInput;
             // Value Help Dialog standard use case with filter bar without filter suggestions
-			oMultiInput = this.byId("multiInput");
+			oMultiInput = this.byId("multiInputInvNo");
 			oMultiInput.addValidator(this._onMultiInputValidate);
 			this._oMultiInput = oMultiInput;
 
@@ -431,6 +431,8 @@ onSearch: function (oEvent) {
       return;
     }
 
+    // MultiInput: evtl. freier Text -> Tokens machen (Go-Click)
+    this._finalizeMultiInputTokens();
     // 2) MultiInput (Tokens)
     if (oControl.getTokens) {
       var aTokenKeys = (oControl.getTokens() || [])
@@ -486,6 +488,33 @@ onSuggest: function (oEvent) {
   oSF.suggest();
 },
 
+//verwandelt die explizite Eingabe (Text) im MultiInput in Tokens
+_finalizeMultiInputTokens: function () {
+  var oMI = this._oMultiInput || this.byId("multiInput");
+  if (!oMI) { return; }
+
+  // Text, der noch im Input steht (noch kein Token)
+  var sText = (oMI.getValue && oMI.getValue() || "").trim();
+  if (!sText) { return; }
+
+  // Optional: mehrere Werte per Komma zulassen
+  var aParts = sText.split(",").map(function (x) { return x.trim(); }).filter(Boolean);
+
+  // Bestehende Token-Keys, um Dubletten zu vermeiden
+  var mExisting = Object.create(null);
+  (oMI.getTokens() || []).forEach(function (t) {
+    var k = t && t.getKey ? (t.getKey() || "").trim() : "";
+    if (k) { mExisting[k] = true; }
+  });
+
+  aParts.forEach(function (sKey) {
+    if (mExisting[sKey]) { return; }
+    oMI.addToken(new sap.m.Token({ key: sKey, text: sKey }));
+  });
+
+  // Input leeren, damit wirklich nur Tokens übrig bleiben
+  oMI.setValue("");
+},
 
 onFilterFieldChanged: function (oEvent) {
   // Nur Variant/Labels aktualisieren
@@ -573,12 +602,7 @@ _buildWildcardSearchFilter: function (sQuery, aPaths) {
 		},
         onInvoiceNoTokenUpdate: function (oEvent) {
             this.oSmartVariantManagement.currentVariantSetModified(true);
-
-            // wichtig: FilterBar muss wissen "Filter haben sich geändert"
             this.oFilterBar.fireFilterChange(oEvent);
-
-            // optional: wenn du direkt filtern willst (wie bei Search)
-            // this.onSearch();
         },
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
