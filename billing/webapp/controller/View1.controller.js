@@ -362,7 +362,7 @@ onValueHelpAfterClose: function () {
         }, []);
         },
 
-onSearch: function () {
+onSearch: function (oEvent) {
   var oBinding = this.oTable.getBinding("items");
   if (!oBinding) { return; }
 
@@ -441,8 +441,13 @@ this.oFilterBar.getFilterGroupItems().forEach(function (oFGI) {
     return;
   }
 });
+    
+  // Variant als geändert markieren
+  this.oSmartVariantManagement.currentVariantSetModified(true);
+  // FilterBar informieren (damit Labels aktualisieren)
+  this.oFilterBar.fireFilterChange(oEvent || {});
 
-  // C) Alles gemeinsam anwenden (AND zwischen global + einzelnen Feldern)
+    // C) Alles gemeinsam anwenden (AND zwischen global + einzelnen Feldern)
   oBinding.filter(aFilters);
   this.oTable.setShowOverlay(false);
 },

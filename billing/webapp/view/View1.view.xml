@@ -69,7 +69,7 @@
                afterVariantLoad=".onAfterVariantLoad">
                     <fb:filterGroupItems>
 
-                        <!-- Quick Search (entspricht deinem SearchField) -->
+                        <!-- Quick Search  -->
                         <fb:FilterGroupItem
                             id="fgiQuickSearch"
                             groupName="Group1"
