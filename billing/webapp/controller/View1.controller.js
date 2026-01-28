@@ -408,6 +408,8 @@ onSearch: function (oEvent) {
     aFilters.push(oGlobalFilter);
   }
 
+    // für MultiInput gedacht, evtl. freier Text -> Tokens machen (Go-Click)
+    this._finalizeMultiInputTokens();
   // B) alle anderen FilterGroupItems (MultiComboBox + MultiInput + SearchField/Input)
   this.oFilterBar.getFilterGroupItems().forEach(function (oFGI) {
     var sName = oFGI.getName();
@@ -430,9 +432,6 @@ onSearch: function (oEvent) {
       }));
       return;
     }
-
-    // MultiInput: evtl. freier Text -> Tokens machen (Go-Click)
-    this._finalizeMultiInputTokens();
     // 2) MultiInput (Tokens)
     if (oControl.getTokens) {
       var aTokenKeys = (oControl.getTokens() || [])
@@ -493,26 +492,65 @@ _finalizeMultiInputTokens: function () {
   var oMI = this._oMultiInput || this.byId("multiInput");
   if (!oMI) { return; }
 
-  // Text, der noch im Input steht (noch kein Token)
   var sText = (oMI.getValue && oMI.getValue() || "").trim();
   if (!sText) { return; }
 
-  // Optional: mehrere Werte per Komma zulassen
+  // mehrere Eingaben per Komma erlauben
   var aParts = sText.split(",").map(function (x) { return x.trim(); }).filter(Boolean);
 
-  // Bestehende Token-Keys, um Dubletten zu vermeiden
+  // vorhandene Token-Keys
   var mExisting = Object.create(null);
   (oMI.getTokens() || []).forEach(function (t) {
     var k = t && t.getKey ? (t.getKey() || "").trim() : "";
     if (k) { mExisting[k] = true; }
   });
 
-  aParts.forEach(function (sKey) {
-    if (mExisting[sKey]) { return; }
-    oMI.addToken(new sap.m.Token({ key: sKey, text: sKey }));
-  });
+  // Quelle: ValueHelp-Liste
+  var oFb = this.getView().getModel("fb");
+  var aInvList = (oFb && oFb.getProperty("/InvoiceNumberList")) || []; // [{InvoiceNo, RecipientName}, ...]
 
-  // Input leeren, damit wirklich nur Tokens übrig bleiben
+  // helper: "*9*" -> "9"
+  var fnCore = function (s) {
+    s = (s || "").trim();
+    if (!s) { return ""; }
+    var sCore = s.replace(/^\*+/, "").replace(/\*+$/, "");
+    return (sCore || "").trim();
+  };
+
+  // helper: findet InvoiceNos, die core enthalten (case-insensitive)
+  var fnFindMatches = function (sPart) {
+    var sCore = fnCore(sPart);
+    if (!sCore) { return []; }
+
+    var sNeedle = sCore.toLowerCase();
+    return aInvList
+      .map(function (x) { return x && x.InvoiceNo != null ? String(x.InvoiceNo) : ""; })
+      .filter(Boolean)
+      .filter(function (sInv) { return sInv.toLowerCase().indexOf(sNeedle) > -1; });
+  };
+
+  aParts.forEach(function (sPart) {
+    // Wenn * enthalten oder du generell Pattern zulassen willst:
+    var aMatches = fnFindMatches(sPart);
+
+    if (aMatches.length > 0) {
+      aMatches.forEach(function (sInv) {
+        if (mExisting[sInv]) { return; }
+        oMI.addToken(new sap.m.Token({ key: sInv, text: sInv }));
+        mExisting[sInv] = true;
+      });
+      return;
+    }
+
+    // Keine Treffer -> als "hartes" Token hinzufügen,
+    // damit der Tabellenfilter später 0 Treffer ergibt (Tabelle leer)
+    var sFallback = sPart;
+    if (!mExisting[sFallback]) {
+      oMI.addToken(new sap.m.Token({ key: sFallback, text: sFallback }));
+      mExisting[sFallback] = true;
+    }
+  });
+  // Textfeld leeren
   oMI.setValue("");
 },
 
