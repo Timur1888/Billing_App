@@ -652,55 +652,6 @@ _buildWildcardSearchFilter: function (sQuery, aPaths) {
             });
         },
 
-        // ---------------------------------------------------
-        // Settings-Button (Spalten ein-/ausblenden)
-        // ---------------------------------------------------
-        _createColumnSettingsPopover: function () {
-            if (this._oColumnPopover) {
-                return this._oColumnPopover;
-            }
-
-            const oTable   = this.byId("tblBilling");
-            const aColumns = oTable.getColumns();
-
-            const oList = new List({
-                items: aColumns.map(col => {
-                    const sColLabel = col.getHeader().getText();
-
-                    return new CustomListItem({
-                        content: new HBox({
-                            items: [
-                                new CheckBox({
-                                    selected: col.getVisible(),
-                                    text: sColLabel,
-                                    select: function (oEvent) {
-                                        const bSelected = oEvent.getParameter("selected");
-                                        col.setVisible(bSelected);
-                                    }
-                                }).addStyleClass("sapUiSmallMarginEnd")
-                            ]
-                        })
-                    });
-                })
-            });
-
-            this._oColumnPopover = new Popover({
-                placement: mLibrary.Bottom,
-                title: "Columns",
-                contentWidth: "250px",
-                content: oList
-            });
-
-            this.getView().addDependent(this._oColumnPopover);
-
-            return this._oColumnPopover;
-        },
-
-        onSettings: function (oEvent) {
-            const oPopover = this._createColumnSettingsPopover();
-            oPopover.openBy(oEvent.getSource());
-        },
- 
 
     });
 });
