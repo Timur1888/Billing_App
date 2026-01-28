@@ -68,7 +68,7 @@
                filterChange=".onFilterChange" 
                afterVariantLoad=".onAfterVariantLoad">
                     <fb:filterGroupItems>
-
+                    
                         <!-- Quick Search  -->
                         <fb:FilterGroupItem
                             id="fgiQuickSearch"
@@ -84,8 +84,6 @@
                                     search=".onSearch" />
                             </fb:control>
                         </fb:FilterGroupItem>
-
-                        
 
                         <!-- ====== Status ====== -->
                         <fb:FilterGroupItem
@@ -112,13 +110,19 @@
                             groupName="Group1"
                             visibleInFilterBar="true">
                             <fb:control>
-                            <MultiComboBox
-                            id="mcbRecipient"
-                            name="RecipientName"
-                            selectionChange=".onFilterSelectionChange"
-                            items="{ path: 'fb>/RecipientNameList', templateShareable: true }">
-                            <core:Item id="RecipientName" key="{fb>key}" text="{fb>text}" />
-                            </MultiComboBox>
+                                <SearchField
+                                        id="sfRecipientName"
+                                        width="50%"
+                                        placeholder="Recipient Name"
+                                        enableSuggestions="true"
+                                        search=".onFilterFieldChanged"
+                                        suggest=".onSuggest"
+                                        suggestionItems="{
+                                            path: 'fb>/RecipientNameList',
+                                            sorter: { path: 'text' }
+                                        }">
+                                    <SuggestionItem text="{fb>text}" key="{fb>key}" />
+                                    </SearchField>
                             </fb:control>
                         </fb:FilterGroupItem>
 

@@ -47,6 +47,8 @@ sap.ui.define([
                 RecipientNameList: [],
                 InvoiceNumberList: []
             }), "fb");
+
+            
             //--------------------------------------------------
 
             //--------------------------------------------------
@@ -363,8 +365,13 @@ onValueHelpAfterClose: function () {
         },
 
 onSearch: function (oEvent) {
+    
   var oBinding = this.oTable.getBinding("items");
   if (!oBinding) { return; }
+
+  // Variant als geändert markieren + FilterBar informieren
+  this.oSmartVariantManagement.currentVariantSetModified(true);
+  this.oFilterBar.fireFilterChange(oEvent || {});
 
   // Welche Felder sollen global durchsucht werden?
   var aSearchPaths = [
@@ -375,83 +382,118 @@ onSearch: function (oEvent) {
     "MetaData/Object/Data/BusinessPartners/0/SalesOrganisation/Value"
   ];
 
-  // 1) SearchField (global)
-  var oSearchFGI = this.oFilterBar.getFilterGroupItems().find(function (oFGI) {
-    return oFGI.getName() === "Search";
-  });
-  var sQuery = "";
-  if (oSearchFGI && oSearchFGI.getControl() && oSearchFGI.getControl().getValue) {
-    sQuery = (oSearchFGI.getControl().getValue() || "").trim();
-  }
-
-  // 2) MultiComboBox Filter (State, RecipientName, etc.) -> falls du sie weiter nutzen willst
+  // Mapping: FilterName -> Pfad im backend Row
   var mFieldToPath = {
     State: "State",
     RecipientName: "MetaData/Object/Data/Basics/Recipient/Name",
     InvoiceNo: "MetaData/Object/Data/Basics/Number/Value"
+    // später easy erweiterbar:
+    // SalesOrg: "MetaData/Object/Data/BusinessPartners/0/SalesOrganisation/Value"
   };
 
   var aFilters = [];
 
-  // A) global SearchFilter bauen (OR über mehrere Felder)
-  var oGlobalFilter = this._buildWildcardSearchFilter(sQuery, aSearchPaths);
+  // A) global SearchFilter (FGI name="Search")
+  var oGlobalFGI = this.oFilterBar.getFilterGroupItems().find(function (oFGI) {
+    return oFGI.getName() === "Search";
+  });
+
+  var sGlobalQuery = "";
+  if (oGlobalFGI && oGlobalFGI.getControl() && oGlobalFGI.getControl().getValue) {
+    sGlobalQuery = (oGlobalFGI.getControl().getValue() || "").trim();
+  }
+ oGlobalFGI.getControl.getId
+  var oGlobalFilter = this._buildWildcardSearchFilter(sGlobalQuery, aSearchPaths);
   if (oGlobalFilter) {
     aFilters.push(oGlobalFilter);
   }
 
-// B) restliche FilterGroupItems (MultiComboBox + MultiInput)
-this.oFilterBar.getFilterGroupItems().forEach(function (oFGI) {
-  var sName = oFGI.getName();
-  if (sName === "Search") { return; }
+  // B) alle anderen FilterGroupItems (MultiComboBox + MultiInput + SearchField/Input)
+  this.oFilterBar.getFilterGroupItems().forEach(function (oFGI) {
+    var sName = oFGI.getName();
+    if (sName === "Search") { return; } // global schon behandelt
 
-  var oControl = oFGI.getControl();
-  var sPath = mFieldToPath[sName];
-  if (!sPath) { return; }
+    var oControl = oFGI.getControl();
+    var sPath = mFieldToPath[sName];
+    if (!oControl || !sPath) { return; }
 
-  // ---- 1) MultiComboBox (wie bisher) ----
-  if (oControl && oControl.getSelectedKeys) {
-    var aKeys = oControl.getSelectedKeys();
-    if (!aKeys || aKeys.length === 0) { return; }
+    // 1) MultiComboBox
+    if (oControl.getSelectedKeys) {
+      var aKeys = oControl.getSelectedKeys() || [];
+      if (aKeys.length === 0) { return; }
 
-    aFilters.push(new sap.ui.model.Filter({
-      filters: aKeys.map(function (sKey) {
-        return new sap.ui.model.Filter(sPath, sap.ui.model.FilterOperator.Contains, sKey);
-      }),
-      and: false
-    }));
-    return;
-  }
+      aFilters.push(new sap.ui.model.Filter({
+        filters: aKeys.map(function (sKey) {
+          return new sap.ui.model.Filter(sPath, sap.ui.model.FilterOperator.Contains, sKey);
+        }),
+        and: false
+      }));
+      return;
+    }
 
-  // ---- 2) MultiInput (Tokens wie SelectedKeys behandeln) ----
-  if (oControl && oControl.getTokens) {
-    var aTokenKeys = (oControl.getTokens() || [])
-      .map(function (t) { return t && t.getKey ? (t.getKey() || "").trim() : ""; })
-      .filter(Boolean);
+    // 2) MultiInput (Tokens)
+    if (oControl.getTokens) {
+      var aTokenKeys = (oControl.getTokens() || [])
+        .map(function (t) { return t && t.getKey ? (t.getKey() || "").trim() : ""; })
+        .filter(Boolean);
 
-    if (aTokenKeys.length === 0) { return; }
+      if (aTokenKeys.length === 0) { return; }
 
-    // Wichtig: bei InvoiceNo meistens EXAKT matchen (EQ).
-    // Wenn deine Daten nicht exakt matchen: auf Contains wechseln.
-    aFilters.push(new sap.ui.model.Filter({
-      filters: aTokenKeys.map(function (sKey) {
-        return new sap.ui.model.Filter(sPath, sap.ui.model.FilterOperator.Contains, sKey);
-      }),
-      and: false
-    }));
-    return;
-  }
-});
-    
-  // Variant als geändert markieren
-  this.oSmartVariantManagement.currentVariantSetModified(true);
-  // FilterBar informieren (damit Labels aktualisieren)
-  this.oFilterBar.fireFilterChange(oEvent || {});
+      aFilters.push(new sap.ui.model.Filter({
+        filters: aTokenKeys.map(function (sKey) {
+          // bei InvoiceNo meist Contains oder EQ – du nutzt Contains aktuell
+          return new sap.ui.model.Filter(sPath, sap.ui.model.FilterOperator.Contains, sKey);
+        }),
+        and: false
+      }));
+      return;
+    }
 
-    // C) Alles gemeinsam anwenden (AND zwischen global + einzelnen Feldern)
+    // 3) SearchField/Input (z.B. RecipientName als Suggest-SearchField)
+        if (oControl.getValue) {
+        var sVal = (oControl.getValue() || "").trim();
+        if (!sVal) { return; }
+
+        var oLocalFilter = this._buildWildcardSearchFilter(sVal, [sPath]);
+        if (oLocalFilter) {
+            aFilters.push(oLocalFilter);
+        }
+        return;
+        }
+  }.bind(this));
+
+  // C) anwenden
   oBinding.filter(aFilters);
   this.oTable.setShowOverlay(false);
 },
 
+onSuggest: function (oEvent) {
+  var oSF = oEvent.getSource();
+  var oBinding = oSF.getBinding("suggestionItems");
+  if (!oBinding) { return; }
+
+  var sValue = (oEvent.getParameter("suggestValue") || oSF.getValue() || "").trim();
+
+  if (!sValue) {
+    oBinding.filter([]);
+    oSF.suggest();
+    return;
+  }
+
+  oBinding.filter([
+    new sap.ui.model.Filter("text", sap.ui.model.FilterOperator.Contains, sValue)
+  ]);
+  oSF.suggest();
+},
+
+
+onFilterFieldChanged: function (oEvent) {
+  // Nur Variant/Labels aktualisieren
+  this.oSmartVariantManagement.currentVariantSetModified(true);
+  this.oFilterBar.fireFilterChange(oEvent || {});
+  // ❌ KEIN this.onSearch()
+  // ❌ KEIN oBinding.filter(...)
+},
 
 //Ermöglicht die Suche mit *
 _buildWildcardSearchFilter: function (sQuery, aPaths) {
