@@ -471,6 +471,9 @@ onSearch: function (oEvent) {
 onSuggest: function (oEvent) {
   var oSF = oEvent.getSource();
   var oBinding = oSF.getBinding("suggestionItems");
+
+  this.onAddFilter();
+
   if (!oBinding) { return; }
 
   var sValue = (oEvent.getParameter("suggestValue") || oSF.getValue() || "").trim();
@@ -554,12 +557,10 @@ _finalizeMultiInputTokens: function () {
   oMI.setValue("");
 },
 
-onFilterFieldChanged: function (oEvent) {
-  // Nur Variant/Labels aktualisieren
+// Nur Variant/Labels aktualisieren
+onAddFilter: function (oEvent) {  
   this.oSmartVariantManagement.currentVariantSetModified(true);
   this.oFilterBar.fireFilterChange(oEvent || {});
-  // ❌ KEIN this.onSearch()
-  // ❌ KEIN oBinding.filter(...)
 },
 
 //Ermöglicht die Suche mit *
@@ -634,14 +635,6 @@ _buildWildcardSearchFilter: function (sQuery, aPaths) {
 			this.oSnappedLabel.setText(this.getFormattedSummaryText());
 			this.oTable.setShowOverlay(true);
 		},
-		onFilterSelectionChange: function (oEvent) {
-            this.oSmartVariantManagement.currentVariantSetModified(true);
-			this.oFilterBar.fireFilterChange(oEvent);
-		},
-        onInvoiceNoTokenUpdate: function (oEvent) {
-            this.oSmartVariantManagement.currentVariantSetModified(true);
-            this.oFilterBar.fireFilterChange(oEvent);
-        },
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 

@@ -69,7 +69,7 @@
                afterVariantLoad=".onAfterVariantLoad">
                     <fb:filterGroupItems>
 
-                        <!-- Quick Search  -->
+                        <!-- Globale Suche  -->
                         <fb:FilterGroupItem
                             id="fgiQuickSearch"
                             groupName="Group1"
@@ -81,7 +81,8 @@
                                     id="sfSearch"
                                     width="18rem"
                                     placeholder="Search"
-                                    search=".onSearch" />
+                                    change = ".onAddFilter"
+                                    search=".onAddFilter" />
                             </fb:control>
                         </fb:FilterGroupItem>
 
@@ -96,7 +97,7 @@
                             <MultiComboBox
                             id="mcbStatus"
                             name="State"
-                            selectionChange=".onFilterSelectionChange"
+                            selectionChange=".onAddFilter"
                             items="{ path: 'fb>/StatusList', templateShareable: true }">
                             <core:Item id ="State" key="{fb>key}" text="{fb>text}" />
                             </MultiComboBox>
@@ -115,7 +116,7 @@
                                         width="50%"
                                         placeholder="Recipient Name"
                                         enableSuggestions="true"
-                                        search=".onFilterFieldChanged"
+                                        search=".onAddFilter"
                                         suggest=".onSuggest"
                                         suggestionItems="{
                                             path: 'fb>/RecipientNameList',
@@ -139,7 +140,8 @@
                             id="multiInputInvNo"
                             width="60%"
                             valueHelpRequest=".onValueHelpRequested"
-                            tokenChange=".onInvoiceNoTokenUpdate"
+                            tokenChange=".onAddFilter"
+                            change=".onAddFilter"
                             suggestionRows="{
                                 path: 'fb>/InvoiceNumberList',
                                 length: 10
