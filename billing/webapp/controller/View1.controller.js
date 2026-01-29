@@ -45,7 +45,8 @@ sap.ui.define([
             this.getView().setModel(new JSONModel({
                 StatusList: [],
                 RecipientNameList: [],
-                InvoiceNumberList: []
+                InvoiceNumberList: [],
+                NettoValueList: []
             }), "fb");
 
             
@@ -266,21 +267,29 @@ onValueHelpAfterClose: function () {
         var mStates = Object.create(null);
         var mNames  = Object.create(null);
         var mInv    = Object.create(null); // key = InvoiceNo, value = {InvoiceNo, RecipientName}
+        var mNet    = Object.create(null);
 
         aRows.forEach(function (r) {
-            var sState = r && r.State;
-            if (sState) { mStates[sState] = true; }
-
-            var sName = r?.MetaData?.Object?.Data?.Basics?.Recipient?.Name || "";
-            if (sName) { mNames[sName] = true; }
-
-            var sInv = r?.MetaData?.Object?.Data?.Basics?.Number?.Value;
-            if (sInv != null && sInv !== "") {
-            var sInvStr = "" + sInv;           // <-- keine String()-Funktion nötig
+          // State
+          var sState = r && r.State;
+          if (sState) { mStates[sState] = true; }
+          // Recipient Name
+          var sName = r?.MetaData?.Object?.Data?.Basics?.Recipient?.Name || "";
+          if (sName) { mNames[sName] = true; }
+          // Invoice No.
+          var sInv = r?.MetaData?.Object?.Data?.Basics?.Number?.Value;
+          if (sInv != null && sInv !== "") {
+            var sInvStr = "" + sInv;
             if (!mInv[sInvStr]) {
-                mInv[sInvStr] = { InvoiceNo: sInvStr, RecipientName: sName };
+              mInv[sInvStr] = { InvoiceNo: sInvStr, RecipientName: sName };
             }
-            }
+          }
+          // Net Amount
+          var vNet = r?.MetaData?.Object?.Data?.Amounts?.Net?.Value;
+          if (vNet != null && vNet !== "") {
+            var sNet = "" + vNet;
+            mNet[sNet] = true;
+          }
         });
 
         oFb.setProperty("/StatusList",
@@ -293,6 +302,10 @@ onValueHelpAfterClose: function () {
 
         oFb.setProperty("/InvoiceNumberList",
             Object.keys(mInv).sort().map(function (k) { return mInv[k]; })
+        );
+
+        oFb.setProperty("/NettoValueList",
+          Object.keys(mNet).sort().map(function (s) { return { key: s, text: s }; })
         );
         },
 
@@ -370,7 +383,7 @@ onSearch: function (oEvent) {
   if (!oBinding) { return; }
 
   // Variant als geändert markieren + FilterBar informieren
-  this.oSmartVariantManagement.currentVariantSetModified(true);
+   this.oSmartVariantManagement.currentVariantSetModified(true);
   this.oFilterBar.fireFilterChange(oEvent || {});
 
   // Welche Felder sollen global durchsucht werden?
@@ -386,9 +399,9 @@ onSearch: function (oEvent) {
   var mFieldToPath = {
     State: "State",
     RecipientName: "MetaData/Object/Data/Basics/Recipient/Name",
-    InvoiceNo: "MetaData/Object/Data/Basics/Number/Value"
-    // später easy erweiterbar:
-    // SalesOrg: "MetaData/Object/Data/BusinessPartners/0/SalesOrganisation/Value"
+    InvoiceNo: "MetaData/Object/Data/Basics/Number/Value",
+    NettoValue: "MetaData/Object/Data/Amounts/Net/Value",
+    FacturaDate: "MetaData/Object/Data/Basics/Date/Value/$date"
   };
 
   var aFilters = [];
@@ -449,24 +462,156 @@ onSearch: function (oEvent) {
       }));
       return;
     }
+      //3) DateRangeSelection
+      if (oControl.getDateValue && oControl.getSecondDateValue) {
+        var dFrom = oControl.getDateValue();        // Date oder null
+        var dTo   = oControl.getSecondDateValue();  // Date oder null
 
-    // 3) SearchField/Input (z.B. RecipientName als Suggest-SearchField)
-        if (oControl.getValue) {
-        var sVal = (oControl.getValue() || "").trim();
-        if (!sVal) { return; }
+        if (!dFrom && !dTo) { return; }
 
-        var oLocalFilter = this._buildWildcardSearchFilter(sVal, [sPath]);
-        if (oLocalFilter) {
-            aFilters.push(oLocalFilter);
+        // JSON hat Millis in $date -> wir filtern numerisch
+        var nFrom = dFrom ? dFrom.getTime() : null;
+        var nTo   = dTo   ? dTo.getTime()   : null;
+
+        // Wichtig: "bis"-Datum inkl. ganzer Tag (23:59:59.999)
+        if (dTo) {
+          nTo = new Date(dTo.getFullYear(), dTo.getMonth(), dTo.getDate(), 23, 59, 59, 999).getTime();
+        }
+
+        if (nFrom != null && nTo != null) {
+          aFilters.push(new sap.ui.model.Filter(sPath, sap.ui.model.FilterOperator.BT, nFrom, nTo));
+        } else if (nFrom != null) {
+          aFilters.push(new sap.ui.model.Filter(sPath, sap.ui.model.FilterOperator.GE, nFrom));
+        } else if (nTo != null) {
+          aFilters.push(new sap.ui.model.Filter(sPath, sap.ui.model.FilterOperator.LE, nTo));
         }
         return;
-        }
+      }
+      // 4) SearchField/Input (z.B. RecipientName als Suggest-SearchField etc.)
+      if (oControl.getValue) {
+      var sVal = (oControl.getValue() || "").trim();
+      if (!sVal) { return; }
+
+      if (sName === "NettoValue") {
+        // Komma/Space tolerieren
+        var n = Number(String(sVal).replace(/\s/g, "").replace(",", "."));
+        if (!Number.isFinite(n)) { return; }
+
+        aFilters.push(new sap.ui.model.Filter(sPath, sap.ui.model.FilterOperator.EQ, n));
+        return;
+      }
+
+      var oLocalFilter = this._buildWildcardSearchFilter(sVal, [sPath]);
+      if (oLocalFilter) {
+          aFilters.push(oLocalFilter);
+      }
+      return;
+      }
   }.bind(this));
 
   // C) anwenden
-  oBinding.filter(aFilters);
-  this.oTable.setShowOverlay(false);
+  try {
+    oBinding.filter(aFilters);
+  } finally {
+    this.oTable.setShowOverlay(false);
+  }
 },
+
+_validateDateDDMMYYYY: function (s) {
+  // erwartet "dd.MM.yyyy"
+  var m = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(s || "");
+  if (!m) { return { ok: false }; }
+
+  var d = parseInt(m[1], 10);
+  var mo = parseInt(m[2], 10);
+  var y = parseInt(m[3], 10);
+
+  var yNow = new Date().getFullYear();
+
+  if (mo < 1 || mo > 12) { return { ok: false, msg: "Month must be between 01 and 12." }; }
+  if (y > yNow) { return { ok: false, msg: "Year must not be greater than " + yNow + "." }; }
+  if (d < 1 || d > 31) { return { ok: false, msg: "Day must be between 01 and 31." }; }
+
+  // echte Datumskonsistenz (z.B. 31.02) prüfen
+  var dt = new Date(y, mo - 1, d);
+  if (dt.getFullYear() !== y || dt.getMonth() !== (mo - 1) || dt.getDate() !== d) {
+    return { ok: false, msg: "Invalid calendar date." };
+  }
+
+  return { ok: true, date: dt };
+},
+
+onFacturaDateChange: function (oEvent) {
+  var oDRS = oEvent.getSource();
+  var sText = (oDRS.getValue() || "").trim();
+
+  // leer -> ok
+  if (!sText) {
+    oDRS.setValueState(sap.ui.core.ValueState.None);
+    oDRS.setValueStateText("");
+    this.onAddFilter();
+    this._closeDRSPopup(oDRS);
+    return;
+  }
+
+  // erlaubt: "dd.MM.yyyy - dd.MM.yyyy"
+  var aParts = sText.split("-").map(function (x) { return x.trim(); });
+
+  // ❗ Range-only erzwingen
+  if (aParts.length !== 2) {
+    oDRS.setValueState(sap.ui.core.ValueState.Error);
+    oDRS.setValueStateText("Please select a date range (from - to).");
+    oDRS.setDateValue(null);
+    oDRS.setSecondDateValue(null);
+    return;
+  }
+
+  // 🔎 HIER rufen wir die Funktion auf
+  var rFrom = this._validateDateDDMMYYYY(aParts[0]);
+  var rTo   = this._validateDateDDMMYYYY(aParts[1]);
+
+  if (!rFrom.ok || !rTo.ok) {
+    oDRS.setValueState(sap.ui.core.ValueState.Error);
+    oDRS.setValueStateText((!rFrom.ok ? rFrom.msg : rTo.msg) || "Invalid date range.");
+    oDRS.setDateValue(null);
+    oDRS.setSecondDateValue(null);
+    return;
+  }
+
+  // Optional: von > bis verhindern
+  if (rFrom.date.getTime() > rTo.date.getTime()) {
+    oDRS.setValueState(sap.ui.core.ValueState.Error);
+    oDRS.setValueStateText("'From' date must be before 'To' date.");
+    oDRS.setDateValue(null);
+    oDRS.setSecondDateValue(null);
+    return;
+  }
+
+  // ✅ gültig → Dates setzen
+  oDRS.setDateValue(rFrom.date);
+  oDRS.setSecondDateValue(rTo.date);
+
+  oDRS.setValueState(sap.ui.core.ValueState.None);
+  oDRS.setValueStateText("");
+
+  this.onAddFilter();
+  this._closeDRSPopup(oDRS);
+},
+
+onFacturaDateParseError: function (oEvent) {
+  var oDRS = oEvent.getSource();
+  oDRS.setValueState(sap.ui.core.ValueState.Error);
+  oDRS.setValueStateText("Invalid date format. Use dd.MM.yyyy - dd.MM.yyyy.");
+},
+
+_closeDRSPopup: function (oDRS) {
+  var oPopup = oDRS && oDRS.getAggregation && oDRS.getAggregation("_popup");
+  if (oPopup && oPopup.isOpen && oPopup.isOpen()) {
+    oPopup.close();
+  }
+},
+
+
 
 onSuggest: function (oEvent) {
   var oSF = oEvent.getSource();

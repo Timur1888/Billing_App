@@ -29,3 +29,12 @@
     padding-right: 0.5rem;
 }
 
+/* DateRangeSelection Text + Placeholder kleiner */
+.facturaDateSmallText input {
+  font-size: 0.85rem;        /* kleiner Text */
+}
+
+/* Placeholder noch etwas kleiner */
+.facturaDateSmallText input::placeholder {
+  font-size: 0.8rem;
+}

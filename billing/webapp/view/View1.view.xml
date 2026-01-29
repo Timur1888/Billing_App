@@ -127,6 +127,23 @@
                             </fb:control>
                         </fb:FilterGroupItem>
 
+                        <!-- ====== Netto Betrag ====== -->
+                        <fb:FilterGroupItem
+                            id="fgiNettoValue"
+                            name="NettoValue"
+                            label="Netto Value"
+                            groupName="Group1"
+                            visibleInFilterBar="true">
+                        <fb:control>
+                            <SearchField
+                                id="sfNettoValue"
+                                width="50%"
+                                placeholder="Netto Value"
+                                search=".onAddFilter" 
+                                change=".onAddFilter"/>
+                        </fb:control>
+                        </fb:FilterGroupItem>
+
                         <!-- ====== InvoiceNo ====== -->
                         <fb:FilterGroupItem
                         id="fgiInvoiceNo"
@@ -164,6 +181,25 @@
                         </MultiInput>
 
                         </fb:control>
+                    </fb:FilterGroupItem>
+
+                    <fb:FilterGroupItem
+                        id="fgiFacturaDate"
+                        name="FacturaDate"
+                        label="Factura Date"
+                        groupName="Group1"
+                        visibleInFilterBar="true">
+                    <fb:control>
+                        <DateRangeSelection
+                            id="drsFacturaDate"
+                            displayFormat="dd.MM.yyyy"
+                            showCurrentDateButton="true"
+			                showFooter="true"
+                            valueFormat="yyyy-MM-dd"
+                            change=".onFacturaDateChange"
+                            parseError=".onFacturaDateParseError"
+                            class="facturaDateSmallText"/>
+                    </fb:control>
                     </fb:FilterGroupItem>
                         
                     </fb:filterGroupItems>
