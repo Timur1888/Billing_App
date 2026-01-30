@@ -6,50 +6,82 @@ sap.ui.define([
     "sap/ui/model/FilterOperator",
     "billing/model/formatter",
     "sap/m/MessageBox",
+    "sap/ui/core/Fragment",
     "sap/m/List",
     "sap/m/CustomListItem",
     "sap/m/HBox",
     "sap/m/CheckBox",
     "sap/m/Popover",
     "sap/m/library",
-    "sap/ui/comp/smartvariants/PersonalizableInfo", "sap/ui/model/type/String", "sap/m/Label", "sap/m/SearchField", "sap/m/Token", "sap/ui/table/Column", "sap/m/Column", "sap/m/Text", "sap/ui/comp/library"
+    "sap/ui/comp/smartvariants/PersonalizableInfo", 
+    "sap/ui/model/type/String", 
+    "sap/m/Label", 
+    "sap/m/SearchField", 
+    "sap/m/Token", 
+    "sap/ui/table/Column", 
+    "sap/m/Column", 
+    "sap/m/Text",
+    "sap/ui/model/Sorter",
+    "sap/m/table/columnmenu/QuickSortItem"
+    
 ], function (
     Controller,
     UIComponent,
     JSONModel,
     Filter,
     FilterOperator,
-    formatter,
+    Formatter,
     MessageBox,
+    Fragment,
     List,
     CustomListItem,
     HBox,
     CheckBox,
     Popover,
     mLibrary,
-    PersonalizableInfo, TypeString, Label, SearchField, Token, UIColumn, MColumn, Text, compLibrary
+    PersonalizableInfo, 
+    TypeString, 
+    Label, 
+    SearchField, 
+    Token, 
+    UIColumn, 
+    MColumn, 
+    Text,
+    Sorter, 
+    QuickSortItem
 ) {
     "use strict";
 
     return Controller.extend("billing.controller.View1", {
 
-        formatter: formatter,
+        formatter: Formatter,
 
         onInit: function () {
+          var oView = this.getView();
             //--------------------------------------------------
             //Backend-Model
             var oBackend = this.getOwnerComponent().getModel("backend");
-            this.getView().setModel(oBackend, "backend");
+            oView.setModel(oBackend, "backend");
 
             // ValueHelp-Model
-            this.getView().setModel(new JSONModel({
+            oView.setModel(new JSONModel({
                 StatusList: [],
                 RecipientNameList: [],
                 InvoiceNumberList: [],
                 NettoValueList: []
             }), "fb");
 
-            
+            Fragment.load({
+              id: oView.getId(),
+              name: "billing.view.fragments.ColumnMenu",
+              controller: this
+            }).then((oMenu) => {
+              oView.addDependent(oMenu);
+              this._oColumnMenu = oMenu;
+              
+              return oMenu;
+            });
+
             //--------------------------------------------------
 
             //--------------------------------------------------
@@ -95,12 +127,89 @@ sap.ui.define([
             //--------------------------------------------------
             var oMultiInput;
             // Value Help Dialog standard use case with filter bar without filter suggestions
-			oMultiInput = this.byId("multiInputInvNo");
-			oMultiInput.addValidator(this._onMultiInputValidate);
-			this._oMultiInput = oMultiInput;
+            oMultiInput = this.byId("multiInputInvNo");
+            oMultiInput.addValidator(this._onMultiInputValidate);
+            this._oMultiInput = oMultiInput;
 
             //--------------------------------------------------
+            this._attachPerColumnMenus();
         },
+  
+
+        //macht Fragment für die Sortierung einzelner Spalten generisch
+_attachPerColumnMenus: function () {
+  const oView  = this.getView();
+  const oTable = this.byId("tblBilling");
+
+  const aPromises = oTable.getColumns().map((oCol) => {
+    const sSortKey = (oCol.data("sortKey") || "").trim();
+    if (!sSortKey) { return Promise.resolve(); }
+
+    return Fragment.load({
+      id: oView.getId() + "--" + oCol.getId(),   // unique prefix pro Column
+      name: "billing.view.fragments.ColumnMenu",
+      controller: this
+    }).then((oMenu) => {
+      oView.addDependent(oMenu);
+
+      // QuickSort finden (UI5-versionsicher)
+      let oQuickSort = null;
+
+      if (oMenu.getItems) {
+        oQuickSort = oMenu.getItems().find(i => i.isA && i.isA("sap.m.table.columnmenu.QuickSort"));
+      }
+
+      // Fallback: tief suchen
+      if (!oQuickSort && oMenu.findAggregatedObjects) {
+        const aFound = oMenu.findAggregatedObjects(true, (oObj) =>
+          oObj.isA && oObj.isA("sap.m.table.columnmenu.QuickSort")
+        );
+        oQuickSort = aFound && aFound[0];
+      }
+
+      if (!oQuickSort) {
+        console.error("QuickSort NOT found. Menu items are:", (oMenu.getItems ? oMenu.getItems().map(x => x.getMetadata().getName()) : []));
+        return;
+      }
+
+      // Items setzen: nur diese Spalte
+      oQuickSort.removeAllItems();
+
+      const oHeader = oCol.getHeader();
+      const sLabel  = (oHeader && oHeader.getText) ? oHeader.getText() : sSortKey;
+
+      oQuickSort.addItem(new QuickSortItem({
+        key: sSortKey,
+        label: sLabel
+      }));
+
+      // Menu nur an diese Column hängen
+      oCol.setHeaderMenu(oMenu);
+    });
+  });
+
+  return Promise.all(aPromises);
+},
+
+
+
+onSortChange: function (oEvent) {
+  const oTable = this.byId("tblBilling");
+  const oBinding = oTable.getBinding("items");
+
+  const oItem = oEvent.getParameter("item"); // QuickSortItem
+  const sPath = oItem.getKey();
+  const sOrder = oItem.getSortOrder();
+
+  if (sOrder === "None") {
+    oBinding.sort();
+    return;
+  }
+
+  const bDesc = (sOrder === "Descending");
+  oBinding.sort([ new Sorter(sPath, bDesc) ]);
+},
+
 
         onClearFilters: function(oEvent) {
           var oBinding = this.oTable.getBinding("items");

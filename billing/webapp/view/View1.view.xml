@@ -10,7 +10,8 @@
     <f:DynamicPage
         id="dpBilling"
         headerExpanded="true"
-        toggleHeaderOnTitleClick="true">
+        toggleHeaderOnTitleClick="true"
+        >
 
         <!-- ====== TITLE AREA (immer sichtbar) ====== -->
         <f:title>
@@ -224,25 +225,141 @@
                 items="{backend>/value}"
                 itemPress=".onInvoicePress"
                 selectionChange=".onSelectionChange">
-
+            <infoToolbar>
+				<OverflowToolbar id="vsdFilterBar" visible="false">
+					<Text id="vsdFilterLabel" />
+				</OverflowToolbar>
+			</infoToolbar>
                 <columns>
-                    <Column id="colStatus"><Text id="txtColStatus" text="Status"/></Column>
-                    <Column id="colRecipientName"><Text id="txtColRecipientName" text="Recipient Name"/></Column>
-                    <Column id="colRecipientEmail"><Text id="txtColRecipientEmail" text="Recipient Email"/></Column>
-                    <Column id="colInvoiceType" hAlign="Center"><Text id="txtColInvoiceType" text="Invoice Type"/></Column>
-                    <Column id="colInvoiceNo"><Text id="txtColInvoiceNo" text="Invoice No."/></Column>
-                    <Column id="colNettoValue" hAlign="End"><Text id="txtColNettoValue" text="Netto Value"/></Column>
-                    <Column id="colBruttoValue" hAlign="End"><Text id="txtColBruttoValue" text="Brutto Value"/></Column>
-                    <Column id="colCcy"><Text id="txtColCcy" text="CCY"/></Column>
-                    <Column id="colSalesOrg"><Text id="txtColSalesOrg" text="Sales Org"/></Column>
-                    <Column id="colFacturaDate"><Text id="txtColFacturaDate" text="Factura Date"/></Column>
-                    <Column id="colCreationDate"><Text id="txtColCreationDate" text="Creation Date"/></Column>
-                    <Column id="colDispatchDate"><Text id="txtColDispatchDate" text="Dispatch Date"/></Column>
-                    <Column id="colTransferFormat"><Text id="txtColTransferFormat" text="Transfer Format"/></Column>
-                    <Column id="colDeliveryMethod"><Text id="txtColDeliveryMethod" text="Delivery Method"/></Column>
-                    <Column id="colDeliveryId"><Text id="txtColDeliveryId" text="Delivery ID"/></Column>
-                    <Column id="colPdf"><Text id="txtColPdf" text="PDF"/></Column>
+                <!-- Status -->
+                <Column id="colStatus" headerMenu="columnHeaderMenu">
+                    <customData>
+                    <core:CustomData key="sortKey" value="State" writeToDom="false"/>
+                    </customData>
+                    <Text id="txtColStatus" text="Status"/>
+                </Column>
+
+                <!-- Recipient Name -->
+                <Column id="colRecipientName" headerMenu="columnHeaderMenu">
+                    <customData>
+                    <core:CustomData key="sortKey" value="MetaData/Object/Data/Basics/Recipient/Name" writeToDom="false"/>
+                    </customData>
+                    <Text id="txtColRecipientName" text="Recipient Name"/>
+                </Column>
+
+                <!-- Recipient Email -->
+                <Column id="colRecipientEmail" headerMenu="columnHeaderMenu">
+                    <customData>
+                    <core:CustomData key="sortKey" value="MetaData/Object/Data/Basics/Recipient/Email/0/Address" writeToDom="false"/>
+                    </customData>
+                    <Text id="txtColRecipientEmail" text="Recipient Email"/>
+                </Column>
+
+                <!-- Invoice Type (formatter in cell -> sort by raw Type) -->
+                <Column id="colInvoiceType" hAlign="Center" headerMenu="columnHeaderMenu">
+                    <customData>
+                    <core:CustomData key="sortKey" value="MetaData/Object/Data/Type" writeToDom="false"/>
+                    </customData>
+                    <Text id="txtColInvoiceType" text="Invoice Type"/>
+                </Column>
+
+                <!-- Invoice No. -->
+                <Column id="colInvoiceNo" headerMenu="columnHeaderMenu">
+                    <customData>
+                    <core:CustomData key="sortKey" value="MetaData/Object/Data/Basics/Number/Value" writeToDom="false"/>
+                    </customData>
+                    <Text id="txtColInvoiceNo" text="Invoice No."/>
+                </Column>
+
+                <!-- Netto Value -->
+                <Column id="colNettoValue" hAlign="End" headerMenu="columnHeaderMenu">
+                    <customData>
+                    <core:CustomData key="sortKey" value="MetaData/Object/Data/Amounts/Net/Value" writeToDom="false"/>
+                    </customData>
+                    <Text id="txtColNettoValue" text="Netto Value"/>
+                </Column>
+
+                <!-- Brutto Value -->
+                <Column id="colBruttoValue" hAlign="End" headerMenu="columnHeaderMenu">
+                    <customData>
+                    <core:CustomData key="sortKey" value="MetaData/Object/Data/Amounts/Gross/Value" writeToDom="false"/>
+                    </customData>
+                    <Text id="txtColBruttoValue" text="Brutto Value"/>
+                </Column>
+
+                <!-- CCY -->
+                <Column id="colCcy" headerMenu="columnHeaderMenu">
+                    <customData>
+                    <core:CustomData key="sortKey" value="MetaData/Object/Data/Amounts/Currency/Value" writeToDom="false"/>
+                    </customData>
+                    <Text id="txtColCcy" text="CCY"/>
+                </Column>
+
+                <!-- Sales Org -->
+                <Column id="colSalesOrg" headerMenu="columnHeaderMenu">
+                    <customData>
+                    <core:CustomData key="sortKey" value="MetaData/Object/Data/BusinessPartners/0/SalesOrganisation/Value" writeToDom="false"/>
+                    </customData>
+                    <Text id="txtColSalesOrg" text="Sales Org"/>
+                </Column>
+
+                <!-- Factura Date -->
+                <Column id="colFacturaDate" headerMenu="columnHeaderMenu">
+                    <customData>
+                    <core:CustomData key="sortKey" value="MetaData/Object/Data/Basics/Date/Value/$date" writeToDom="false"/>
+                    </customData>
+                    <Text id="txtColFacturaDate" text="Factura Date"/>
+                </Column>
+
+                <!-- Creation Date -->
+                <Column id="colCreationDate" headerMenu="columnHeaderMenu">
+                    <customData>
+                    <core:CustomData key="sortKey" value="History/Created/Date/$date" writeToDom="false"/>
+                    </customData>
+                    <Text id="txtColCreationDate" text="Creation Date"/>
+                </Column>
+
+                <!-- Dispatch Date -->
+                <Column id="colDispatchDate" headerMenu="columnHeaderMenu">
+                    <customData>
+                    <core:CustomData key="sortKey" value="MetaData/Object/Data/Basics/SendDate/$date" writeToDom="false"/>
+                    </customData>
+                    <Text id="txtColDispatchDate" text="Dispatch Date"/>
+                </Column>
+
+                <!-- Transfer Format -->
+                <Column id="colTransferFormat" headerMenu="columnHeaderMenu">
+                    <customData>
+                    <core:CustomData key="sortKey" value="MetaData/Object/Data/Basics/TransferFormat" writeToDom="false"/>
+                    </customData>
+                    <Text id="txtColTransferFormat" text="Transfer Format"/>
+                </Column>
+
+                <!-- Delivery Method (formatter in cell -> sort by raw DeliveryMethod) -->
+                <Column id="colDeliveryMethod" headerMenu="columnHeaderMenu">
+                    <customData>
+                    <core:CustomData key="sortKey" value="MetaData/Object/Data/Basics/DeliveryMethod" writeToDom="false"/>
+                    </customData>
+                    <Text id="txtColDeliveryMethod" text="Delivery Method"/>
+                </Column>
+
+                <!-- Delivery ID -->
+                <Column id="colDeliveryId" headerMenu="columnHeaderMenu">
+                    <customData>
+                    <core:CustomData key="sortKey" value="MetaData/Object/Data/BusinessPartners/1/LeitwegId/Value" writeToDom="false"/>
+                    </customData>
+                    <Text id="txtColDeliveryId" text="Delivery ID"/>
+                </Column>
+
+                <!-- PDF (formatter in cell -> sort by raw TransferFormat) -->
+                <Column id="colPdf" headerMenu="columnHeaderMenu">
+                    <customData>
+                    <core:CustomData key="sortKey" value="MetaData/Object/Data/Basics/TransferFormat" writeToDom="false"/>
+                    </customData>
+                    <Text id="txtColPdf" text="PDF"/>
+                </Column>
                 </columns>
+
 
                 <items>
                     <ColumnListItem id="cliBilling" type="Active">

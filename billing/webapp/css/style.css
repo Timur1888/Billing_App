@@ -38,3 +38,16 @@
 .facturaDateSmallText input::placeholder {
   font-size: 0.8rem;
 }
+
+
+/* Ganzer Column Header beim Hover grau machen */
+.sapMTableTH:hover {
+  background-color: var(--sapList_Hover_Background);
+}
+
+/* Sicherstellen, dass der Inhalt die volle Höhe nutzt */
+.sapMTableTH > .sapMTableTHContent {
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
