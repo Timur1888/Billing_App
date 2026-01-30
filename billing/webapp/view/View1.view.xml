@@ -62,11 +62,15 @@
         <f:header>
             <f:DynamicPageHeader id="dphHeader" pinnable="true">
                 <f:content>
+
+                <Button text="Clear Filters" type="Transparent" press=".onClearFilters"/>
+                                                      
                 <!-- Hier ist der Bereich wie im Screenshot (Filter + Search) -->
                <fb:FilterBar id="filterbar" persistencyKey="myPersKey" 
                useToolbar="false" search=".onSearch" 
                filterChange=".onFilterChange" 
-               afterVariantLoad=".onAfterVariantLoad">
+               afterVariantLoad=".onAfterVariantLoad"
+               >
                     <fb:filterGroupItems>
 
                         <!-- Globale Suche  -->

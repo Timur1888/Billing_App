@@ -102,6 +102,38 @@ sap.ui.define([
             //--------------------------------------------------
         },
 
+        onClearFilters: function(oEvent) {
+          var oBinding = this.oTable.getBinding("items");
+            (this.oFilterBar.getFilterGroupItems() || []).forEach(function (oFGI) {
+              var oC = oFGI.getControl();
+              if (!oC) { return; }
+
+              // SearchField/Input
+              if (oC.setValue) { oC.setValue(""); }
+
+              // MultiComboBox
+              if (oC.setSelectedKeys) { oC.setSelectedKeys([]); }
+
+              // MultiInput
+              if (oC.removeAllTokens) { oC.removeAllTokens(); }
+
+              // DateRangeSelection
+              if (oC.setDateValue) { oC.setDateValue(null); }
+              if (oC.setSecondDateValue) { oC.setSecondDateValue(null); }
+
+              // ValueState reset
+              if (oC.setValueState) { oC.setValueState(sap.ui.core.ValueState.None); }
+              if (oC.setValueStateText) { oC.setValueStateText(""); }
+            });
+            
+            this.oSmartVariantManagement.currentVariantSetModified(false);
+            this.oFilterBar.fireFilterChange(oEvent || {});
+            this.oTable.setShowOverlay(false);
+            if (oBinding) {
+              oBinding.filter([]); 
+            }
+          },
+
 // --- VALUE HELP: Invoice .No -------------
 		// #region Value Help Dialog standard use case with filter bar without filter suggestions
 		onValueHelpRequested: function() {
