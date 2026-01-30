@@ -103,8 +103,8 @@
                             id="mcbStatus"
                             name="State"
                             selectionChange=".onAddFilter"
-                            items="{ path: 'fb>/StatusList', templateShareable: true }">
-                            <core:Item id ="State" key="{fb>key}" text="{fb>text}" />
+                            items="{ path: 'filterModel>/StatusList', templateShareable: true }">
+                            <core:Item id ="State" key="{filterModel>key}" text="{filterModel>text}" />
                             </MultiComboBox>
                             </fb:control>
                         </fb:FilterGroupItem>
@@ -124,10 +124,10 @@
                                         search=".onAddFilter"
                                         suggest=".onSuggest"
                                         suggestionItems="{
-                                            path: 'fb>/RecipientNameList',
+                                            path: 'filterModel>/RecipientNameList',
                                             sorter: { path: 'text' }
                                         }">
-                                    <SuggestionItem text="{fb>text}" key="{fb>key}" />
+                                    <SuggestionItem text="{filterModel>text}" key="{filterModel>key}" />
                                     </SearchField>
                             </fb:control>
                         </fb:FilterGroupItem>
@@ -165,7 +165,7 @@
                             tokenChange=".onAddFilter"
                             change=".onAddFilter"
                             suggestionRows="{
-                                path: 'fb>/InvoiceNumberList',
+                                path: 'filterModel>/InvoiceNumberList',
                                 length: 10
                             }">
                             <suggestionColumns>
@@ -179,8 +179,8 @@
 
                             <suggestionRows>
                                 <ColumnListItem id="cliSugInvNo">
-                                    <Label id="lblSugInvNoVal" text="{fb>InvoiceNo}" />
-                                    <Label id="lblSugInvRecNameVal" text="{fb>RecipientName}" />
+                                    <Label id="lblSugInvNoVal" text="{filterModel>InvoiceNo}" />
+                                    <Label id="lblSugInvRecNameVal" text="{filterModel>RecipientName}" />
                                 </ColumnListItem>
                             </suggestionRows>
                         </MultiInput>
