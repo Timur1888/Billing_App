@@ -239,6 +239,14 @@
                     <Text id="txtColStatus" text="Status"/>
                 </Column>
 
+                <!-- Delivery Mode -->
+                <Column id="colDeliveryMode" headerMenu="columnHeaderMenu">
+                    <customData>
+                    <core:CustomData key="sortKey" value="Process/DeliveryPlan/ExecutionMode" writeToDom="false"/>
+                    </customData>
+                    <Text id="txtColEliveryMode" text="Delivery Mode"/>
+                </Column>
+
                 <!-- Recipient Name -->
                 <Column id="colRecipientName" headerMenu="columnHeaderMenu">
                     <customData>
@@ -255,6 +263,14 @@
                     <Text id="txtColRecipientEmail" text="Recipient Email"/>
                 </Column>
 
+                <!-- Invoice No. -->
+                <Column id="colInvoiceNo" headerMenu="columnHeaderMenu">
+                    <customData>
+                    <core:CustomData key="sortKey" value="MetaData/Object/Data/Basics/Number/Value" writeToDom="false"/>
+                    </customData>
+                    <Text id="txtColInvoiceNo" text="Invoice No."/>
+                </Column>
+
                 <!-- Invoice Type (formatter in cell -> sort by raw Type) -->
                 <Column id="colInvoiceType" hAlign="Center" headerMenu="columnHeaderMenu">
                     <customData>
@@ -263,12 +279,12 @@
                     <Text id="txtColInvoiceType" text="Invoice Type"/>
                 </Column>
 
-                <!-- Invoice No. -->
-                <Column id="colInvoiceNo" headerMenu="columnHeaderMenu">
+                <!-- Invoice Sub Type  -->
+                <Column id="colSubType" hAlign="Center" headerMenu="columnHeaderMenu">
                     <customData>
-                    <core:CustomData key="sortKey" value="MetaData/Object/Data/Basics/Number/Value" writeToDom="false"/>
+                    <core:CustomData key="sortKey" value="MetaData/Object/Data/SubType" writeToDom="false"/>
                     </customData>
-                    <Text id="txtColInvoiceNo" text="Invoice No."/>
+                    <Text id="txtColSubType" text="Sub Type"/>
                 </Column>
 
                 <!-- Netto Value -->
@@ -293,6 +309,14 @@
                     <core:CustomData key="sortKey" value="MetaData/Object/Data/Amounts/Currency/Value" writeToDom="false"/>
                     </customData>
                     <Text id="txtColCcy" text="CCY"/>
+                </Column>
+
+                <!-- Origin System -->
+                <Column id="colOrigin" headerMenu="columnHeaderMenu">
+                    <customData>
+                    <core:CustomData key="sortKey" value="MetaData/OriginSystem" writeToDom="false"/>
+                    </customData>
+                    <Text id="txtOrigin" text="Origin"/>
                 </Column>
 
                 <!-- Sales Org -->
@@ -379,11 +403,27 @@
                                 }"
                             />
 
+                            <!-- Delivery Mode -->
+                            <ObjectStatus 
+                                    id="txtDeliveryMode" 
+                                    text=""
+                                    icon="{
+                                        path: 'backend>Process/DeliveryPlan/ExecutionMode',
+                                        formatter: '.formatter.formatDeliveryModeIcon'
+                                    }"
+                                    state="{
+                                        path: 'backend>Process/DeliveryPlan/ExecutionMode',
+                                        formatter: '.formatter.formatDeliveryModeState'
+                                    }" />
+
                             <!-- Recipient Name -->
                             <Text id="txtRecipientName" text="{backend>MetaData/Object/Data/Basics/Recipient/Name}" />
 
                             <!-- Recipient Email -->
                             <Text id="txtRecipientEmail" text="{backend>MetaData/Object/Data/Basics/Recipient/Email/0/Address}" />
+
+                            <!-- Invoice No. -->
+                            <Text id="txtInvoiceNo" text="{backend>MetaData/Object/Data/Basics/Number/Value}" />
 
                             <!-- Invoice Type -->
                             <Text id="txtInvoiceType" text="{
@@ -391,8 +431,8 @@
                                 formatter: '.formatter.formatInvoiceType'
                             }" />
 
-                            <!-- Invoice No. -->
-                            <Text id="txtInvoiceNo" text="{backend>MetaData/Object/Data/Basics/Number/Value}" />
+                            <!-- Sub Type -->
+                            <Text id="txtSubType" text="{backend>MetaData/Object/Data/SubType}" />
 
                             <!-- Netto -->
                             <ObjectNumber
@@ -416,6 +456,9 @@
                                 formatter: '.formatter.formatCurrency'
                             }" />
 
+                            <!-- Origin System -->
+                            <Text id="txtOriginCell" text="{backend>MetaData/OriginSystem}" />
+
                             <!-- Sales Org -->
                             <Text id="txtSalesOrgCell" text="{backend>MetaData/Object/Data/BusinessPartners/0/SalesOrganisation/Value}" />
 
@@ -438,13 +481,19 @@
                             }" />
 
                             <!-- Transfer Format -->
-                            <Text id="txtTransferFormatCell" text="{backend>MetaData/Object/Data/Basics/TransferFormat}" />
+                            <Text id="txtTransferFormatCell" text="{path: 'backend>MetaData/Object/Data/Basics/TransferFormat',
+                                                                    formatter: '.formatter.formatTransferFormat'}" />
 
-                            <!-- Delivery Method -->
+                            <!-- Delivery Method
                             <Text id="txtDeliveryMethodCell" text="{
                                 path: 'backend>MetaData/Object/Data/Basics/DeliveryMethod',
                                 formatter: '.formatter.formatDeliveryMethod'
-                            }" />
+                            }" /> -->
+
+                 <ObjectStatus
+                    text="{path:'backend>MetaData/Object/Data/Basics/DeliveryMethod', formatter:'.formatter.formatDeliveryMethodText'}"
+                    icon="{path:'backend>MetaData/Object/Data/Basics/DeliveryMethod', formatter:'.formatter.formatDeliveryMethodIcon'}" />
+
 
                             <!-- Delivery ID -->
                             <Text id="txtDeliveryIdCell" text="{backend>MetaData/Object/Data/BusinessPartners/1/LeitwegId/Value}" />

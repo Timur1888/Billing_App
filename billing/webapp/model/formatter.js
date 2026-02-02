@@ -17,10 +17,24 @@ sap.ui.define([
             return sCur.replace(/^ccCS_/, "");
         },
 
-        // --- Formatter für DeliveryMethod ccDM_* -> * ---
-        formatDeliveryMethod: function (sMethod) {
+        // --- Formatter für Transfer Format ccBF_* -> * ---
+        formatTransferFormat: function (sMethod) {
             if (!sMethod) { return ""; }
-            return sMethod.replace(/^ccDM_/, "");
+            return sMethod.replace(/^ccBF_/, "");
+        },
+
+        // Text: ccDM_* -> *
+        formatDeliveryMethodText: function (sMethod) {
+        return sMethod ? sMethod.replace(/^ccDM_/, "") : "";
+        },
+
+        // Icon je nach Wert
+        formatDeliveryMethodIcon: function (sMethod) {
+        switch (sMethod) {
+            case "ccDM_Email":         return "sap-icon://email";
+            case "ccDM_PostalService": return "sap-icon://print";
+            default:                  return "";
+        }
         },
 
         // --- Datum aus $date in lesbares Datum konvertieren ---
@@ -80,6 +94,31 @@ sap.ui.define([
                 default:
                     return sap.ui.core.ValueState.None;
             }
-        }
+        },
+        // ---------------------------------------------------
+        // Delivery Mode-Formatter
+        // ---------------------------------------------------
+        formatDeliveryModeIcon: function (sDelMode) {
+            switch (sDelMode) {
+                case "ccDM_Unknown":
+                    return "sap-icon://question-mark";
+                case "ccDM_UserAction":
+                    return "sap-icon://action";
+                default:
+                    return "sap-icon://question-mark";
+            }
+        },
+
+        // --- Formatter für DeliveryMode ccDM_* -> * ---
+        formatDeliveryModeState: function (sDelMethod) {
+                switch (sDelMethod) {
+                case "ccDS_Finished":
+                    return sap.ui.core.ValueState.Success;
+                case "ccDS_UserAction":
+                    return sap.ui.core.ValueState.Warning;
+                default:
+                    return sap.ui.core.ValueState.None;
+            };
+        },
     };
 });
