@@ -157,34 +157,12 @@
                         groupName="Group1"
                         visibleInFilterBar="true">
                         <fb:control>
-
-                        <MultiInput
-                            id="multiInputInvNo"
-                            width="60%"
-                            valueHelpRequest=".onValueHelpRequested"
-                            tokenChange=".onAddFilter"
-                            change=".onAddFilter"
-                            suggestionRows="{
-                                path: 'filterModel>/InvoiceNumberList',
-                                length: 10
-                            }">
-                            <suggestionColumns>
-                                <Column id="colSugInvNo">
-                                    <Label id="lblSugInvNo" text="Invoice No."/>
-                                </Column>
-                                <Column id="colSugInvRecName">
-                                    <Label id="lblSugInvRecName" text="Recipient Name"/>
-                                </Column>
-                            </suggestionColumns>
-
-                            <suggestionRows>
-                                <ColumnListItem id="cliSugInvNo">
-                                    <Label id="lblSugInvNoVal" text="{filterModel>InvoiceNo}" />
-                                    <Label id="lblSugInvRecNameVal" text="{filterModel>RecipientName}" />
-                                </ColumnListItem>
-                            </suggestionRows>
-                        </MultiInput>
-
+                            <SearchField
+                                id="sfInvNo"
+                                width="50%"
+                                placeholder="Invoice No."
+                                search=".onAddFilter" 
+                                change=".onAddFilter"/>
                         </fb:control>
                     </fb:FilterGroupItem>
 

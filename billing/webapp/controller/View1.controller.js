@@ -116,13 +116,6 @@ sap.ui.define([
             this.oSmartVariantManagement.initialise(function() {}, this.oFilterBar);
             //--------------------------------------------------
 
-            //--------------------MultiInput---------------------
-            var oMultiInput;
-            // Value Help Dialog standard use case with filter bar without filter suggestions
-            oMultiInput = this.byId("multiInputInvNo");
-            oMultiInput.addValidator(this._onMultiInputValidate);
-            this._oMultiInput = oMultiInput;
-
             //--------------------Sortierung----------------------
             this._aColumnMenus = [];
             this._fnItemsBindingChange = null;
@@ -193,9 +186,6 @@ sap.ui.define([
             if (oGlobalFilter) {
                 aFilters.push(oGlobalFilter);
             }
-
-            // für MultiInput gedacht, evtl. freier Text -> Tokens machen (Go-Click)
-            this._finalizeMultiInputTokens();
             // B) alle anderen FilterGroupItems (MultiComboBox + MultiInput + SearchField/Input)
             this.oFilterBar.getFilterGroupItems().forEach(function(oFGI) {
                 var sName = oFGI.getName();
@@ -224,28 +214,7 @@ sap.ui.define([
                     }));
                     return;
                 }
-                // 2) MultiInput (Tokens)
-                if (oControl.getTokens) {
-                    var aTokenKeys = (oControl.getTokens() || [])
-                        .map(function(t) {
-                            return t && t.getKey ? (t.getKey() || "").trim() : "";
-                        })
-                        .filter(Boolean);
-
-                    if (aTokenKeys.length === 0) {
-                        return;
-                    }
-
-                    aFilters.push(new sap.ui.model.Filter({
-                        filters: aTokenKeys.map(function(sKey) {
-                            // bei InvoiceNo meist Contains oder EQ – du nutzt Contains aktuell
-                            return new sap.ui.model.Filter(sPath, sap.ui.model.FilterOperator.Contains, sKey);
-                        }),
-                        and: false
-                    }));
-                    return;
-                }
-                //3) DateRangeSelection
+                //2) DateRangeSelection
                 if (oControl.getDateValue && oControl.getSecondDateValue) {
                     var dFrom = oControl.getDateValue(); // Date oder null
                     var dTo = oControl.getSecondDateValue(); // Date oder null
@@ -272,7 +241,7 @@ sap.ui.define([
                     }
                     return;
                 }
-                // 4) SearchField/Input (z.B. RecipientName als Suggest-SearchField etc.)
+                // 3) SearchField/Input (z.B. RecipientName als Suggest-SearchField etc.)
                 if (oControl.getValue) {
                     var sVal = (oControl.getValue() || "").trim();
                     if (!sVal) {
@@ -486,11 +455,6 @@ sap.ui.define([
                     oC.setSelectedKeys([]);
                 }
 
-                // MultiInput
-                if (oC.removeAllTokens) {
-                    oC.removeAllTokens();
-                }
-
                 // DateRangeSelection
                 if (oC.setDateValue) {
                     oC.setDateValue(null);
@@ -514,170 +478,6 @@ sap.ui.define([
             if (oBinding) {
                 oBinding.filter([]);
             }
-        },
-
-        // ---------------------------------------------------------- MultiInput: Invoice .No ------------------------------------------------------------------
-        //Aktiviert den Dialog (Fragment) für MultiInput
-        onValueHelpRequested: function() {
-            this._oBasicSearchField = new SearchField();
-            this.loadFragment({
-                name: "billing.view.fragments.VH_InvoiceNo"
-            }).then(function(oDialog) {
-                var oFilterBar = oDialog.getFilterBar(),
-                    oColumnInvoiceNo, oColumnRecipientName;
-                this._oVHD = oDialog;
-
-                this.getView().addDependent(oDialog);
-
-                // Set key fields for filtering in the Define Conditions Tab
-                oDialog.setRangeKeyFields([{
-                    label: "Invoice .No",
-                    key: "InvoiceNo",
-                    type: "string",
-                    typeInstance: new TypeString({}, {})
-                }]);
-
-                // Set Basic Search for FilterBar
-                oFilterBar.setFilterBarExpanded(false);
-                oFilterBar.setBasicSearch(this._oBasicSearchField);
-
-                // Trigger filter bar search when the basic search is fired
-                this._oBasicSearchField.attachSearch(function() {
-                    oFilterBar.search();
-                });
-
-                oDialog.getTableAsync().then(function(oTable) {
-
-                    oTable.setModel(this.getView().getModel("filterModel"), "filterModel");
-
-                    // For Desktop and tabled the default table is sap.ui.table.Table
-                    if (oTable.bindRows) {
-                        // Bind rows to the ODataModel and add columns
-                        oTable.bindAggregation("rows", {
-                            path: "filterModel>/InvoiceNumberList",
-                            events: {
-                                dataReceived: function() {
-                                    oDialog.update();
-                                }
-                            }
-                        });
-                        oColumnInvoiceNo = new UIColumn({
-                            label: new Label({
-                                text: "Invoice No."
-                            }),
-                            template: new Text({
-                                wrapping: false,
-                                text: "{filterModel>InvoiceNo}"
-                            })
-                        });
-                        oColumnInvoiceNo.data({
-                            fieldName: "InvoiceNo"
-                        });
-                        oColumnRecipientName = new UIColumn({
-                            label: new Label({
-                                text: "Recipient Name"
-                            }),
-                            template: new Text({
-                                wrapping: false,
-                                text: "{filterModel>RecipientName}"
-                            })
-                        });
-                        oColumnRecipientName.data({
-                            fieldName: "RecipientName"
-                        });
-                        oTable.addColumn(oColumnInvoiceNo);
-                        oTable.addColumn(oColumnRecipientName);
-                    }
-
-                    // For Mobile the default table is sap.m.Table
-                    if (oTable.bindItems) {
-                        // Bind items to the ODataModel and add columns
-                        oTable.bindAggregation("items", {
-                            path: "filterModel>/InvoiceNumberList",
-                            template: new ColumnListItem({
-                                cells: [new Label({
-                                    text: "Invoice No."
-                                }), new Label({
-                                    text: "{filterModel>InvoiceNo}"
-                                })]
-                            }),
-                            events: {
-                                dataReceived: function() {
-                                    oDialog.update();
-                                }
-                            }
-                        });
-                        oTable.addColumn(new MColumn({
-                            header: new Label({
-                                text: "Invoice No."
-                            })
-                        }));
-                        oTable.addColumn(new MColumn({
-                            header: new Label({
-                                text: "Recipient Name"
-                            })
-                        }));
-                    }
-                    oDialog.update();
-                }.bind(this));
-
-                oDialog.setTokens(this._oMultiInput.getTokens());
-                oDialog.open();
-            }.bind(this));
-        },
-
-        //schließt das Fragment beim OK-Klick
-        onValueHelpOkPress: function(oEvent) {
-            var aTokens = oEvent.getParameter("tokens");
-            this._oMultiInput.setTokens(aTokens);
-            this._oVHD.close();
-        },
-        //schließt das Fragment beim Cancel-Klick
-        onValueHelpCancelPress: function() {
-            this._oVHD.close();
-        },
-        //löscht die Daten des Fragmentes
-        onValueHelpAfterClose: function() {
-            this._oVHD.destroy();
-        },
-
-        // Ermöglicht die Suche nach den Filtern innerhalb des Fragmentes
-        onFilterBarSearch: function(oEvent) {
-            var sSearchQuery = this._oBasicSearchField.getValue(),
-                aSelectionSet = oEvent.getParameter("selectionSet");
-
-            var aFilters = aSelectionSet.reduce(function(aResult, oControl) {
-                if (oControl.getValue()) {
-                    aResult.push(new Filter({
-                        path: oControl.getName(),
-                        operator: FilterOperator.Contains,
-                        value1: oControl.getValue()
-                    }));
-                }
-
-                return aResult;
-            }, []);
-
-            aFilters.push(new Filter({
-                filters: [
-                    new Filter({
-                        path: "InvoiceNo",
-                        operator: FilterOperator.Contains,
-                        value1: sSearchQuery
-                    }),
-                    new Filter({
-                        path: "RecipientName",
-                        operator: FilterOperator.Contains,
-                        value1: sSearchQuery
-                    })
-                ],
-                and: false
-            }));
-
-            this._filterTable(new Filter({
-                filters: aFilters,
-                and: true
-            }));
         },
 
         //-------------------------------------------------------------DateRangeSelection: Factura Date-----------------------------------------
@@ -789,14 +589,6 @@ sap.ui.define([
                 } catch (e) {}
             }
             this._oBasicSearchField = null;
-
-            // 5) MultiInput Validator entfernen (optional aber sauber)
-            if (this._oMultiInput && this._onMultiInputValidate) {
-                try {
-                    this._oMultiInput.removeValidator(this._onMultiInputValidate);
-                } catch (e) {}
-            }
-            this._oMultiInput = null;
 
             // 6) Rest 
             this.oModel = null;
