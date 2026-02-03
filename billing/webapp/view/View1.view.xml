@@ -484,15 +484,9 @@
                             <Text id="txtTransferFormatCell" text="{path: 'backend>MetaData/Object/Data/Basics/TransferFormat',
                                                                     formatter: '.formatter.formatTransferFormat'}" />
 
-                            <!-- Delivery Method
-                            <Text id="txtDeliveryMethodCell" text="{
-                                path: 'backend>MetaData/Object/Data/Basics/DeliveryMethod',
-                                formatter: '.formatter.formatDeliveryMethod'
-                            }" /> -->
-
-                 <ObjectStatus
-                    text="{path:'backend>MetaData/Object/Data/Basics/DeliveryMethod', formatter:'.formatter.formatDeliveryMethodText'}"
-                    icon="{path:'backend>MetaData/Object/Data/Basics/DeliveryMethod', formatter:'.formatter.formatDeliveryMethodIcon'}" />
+                            <ObjectStatus
+                                text="{path:'backend>MetaData/Object/Data/Basics/DeliveryMethod', formatter:'.formatter.formatDeliveryMethodText'}"
+                                icon="{path:'backend>MetaData/Object/Data/Basics/DeliveryMethod', formatter:'.formatter.formatDeliveryMethodIcon'}" />
 
 
                             <!-- Delivery ID -->

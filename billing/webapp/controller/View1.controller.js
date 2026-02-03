@@ -280,16 +280,41 @@ sap.ui.define([
                     }
 
                     if (sName === "NettoValue") {
-                        // Komma/Space tolerieren
+
+                        // ⭐ 1) Wildcard explizit erlauben → NICHT returnen
+                        if (sVal.includes("*")) {
+                            var sNeedle = sVal.replace(/\*/g, "").trim(); // "*3*" -> "3"
+
+                            // nur "*" => keine Einschränkung
+                            if (!sNeedle) {
+                            return;
+                            }
+
+                            aFilters.push(new sap.ui.model.Filter({
+                            path: sPath,
+                            test: function (v) {
+                                if (v === null || v === undefined) { return false; }
+                                return String(v).includes(sNeedle);     //wir verwandeln hier die Int Werte aus der Tabelle in String und vergleichen dann
+                            }
+                            }));
+                            return;
+                        }
+
+                        // ⭐ 2) Komma & Spaces tolerieren
                         var n = Number(String(sVal).replace(/\s/g, "").replace(",", "."));
+
+                        // ⭐ 3) Ungültige Zahl → nichts kaputt machen
                         if (!Number.isFinite(n)) {
                             return;
                         }
 
-                        aFilters.push(new sap.ui.model.Filter(sPath, sap.ui.model.FilterOperator.EQ, n));
+                        aFilters.push(
+                            new sap.ui.model.Filter(sPath, sap.ui.model.FilterOperator.EQ, n)
+                        );
                         return;
                     }
 
+                    // Standard-Fall (Strings etc.)
                     var oLocalFilter = this._buildWildcardSearchFilter(sVal, [sPath]);
                     if (oLocalFilter) {
                         aFilters.push(oLocalFilter);
