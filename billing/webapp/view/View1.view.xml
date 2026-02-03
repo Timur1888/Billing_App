@@ -190,6 +190,56 @@
                         </fb:control>
                     </fb:FilterGroupItem>
 
+                    <!-- ====== Invoice Type ====== -->
+                    <fb:FilterGroupItem
+                        id="fgiInvType"
+                        name="InvoiceType"
+                        label="Invoice Type"
+                        groupName="Group1"
+                        visibleInFilterBar="true">
+                        <fb:control>
+                            <SearchField
+                                    id="sfInvType"
+                                    width="50%"
+                                    placeholder="Invoice Type"
+                                    enableSuggestions="true"
+                                    search=".onAddFilter"
+                                    suggest=".onSuggest"
+                                    suggestionItems="{
+                                        path: 'filterModel>/InvoiceTypeList',
+                                        sorter: { path: 'text' }
+                                    }">
+                                <SuggestionItem
+                                    text="{path:'filterModel>text', formatter:'.formatter.formatInvoiceType'}"
+                                    key="{filterModel>key}" />
+                                </SearchField>
+                        </fb:control>
+                    </fb:FilterGroupItem>
+
+                    <!-- ====== Sub Type ====== -->
+                    <fb:FilterGroupItem
+                        id="fgiSubType"
+                        name="SubType"
+                        label="Sub Type"
+                        groupName="Group1"
+                        visibleInFilterBar="true">
+                        <fb:control>
+                            <SearchField
+                                    id="sfSubType"
+                                    width="50%"
+                                    placeholder="Sub Type"
+                                    enableSuggestions="true"
+                                    search=".onAddFilter"
+                                    suggest=".onSuggest"
+                                    suggestionItems="{
+                                        path: 'filterModel>/SubTypeList',
+                                        sorter: { path: 'text' }
+                                    }">
+                                <SuggestionItem text="{filterModel>text}" key="{filterModel>key}" />
+                                </SearchField>
+                        </fb:control>
+                    </fb:FilterGroupItem>
+
                     <fb:FilterGroupItem
                         id="fgiFacturaDate"
                         name="FacturaDate"

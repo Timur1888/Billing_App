@@ -88,6 +88,8 @@ sap.ui.define([
       var mStates = Object.create(null);
       var mNames = Object.create(null);
       var mSalesOrg = Object.create(null);
+      var mInvType = Object.create(null);
+      var msubType = Object.create(null);
 
       aRows.forEach(function(r) {
         // State
@@ -104,6 +106,18 @@ sap.ui.define([
         var sSalesOrg = r?.MetaData?.Object?.Data?.BusinessPartners?.[0]?.SalesOrganisation?.Value || "";
         if (sSalesOrg) {
           mSalesOrg[sSalesOrg] = true;
+        }
+
+        // Invoice Type
+        var sInvType = r?.MetaData?.Object?.Data?.Type || "";
+        if (sInvType) {
+          mInvType[sInvType] = true;
+        }
+        
+        // Sub Type
+        var sSubType = r?.MetaData?.Object?.Data?.SubType || "";
+        if (sSubType) {
+          msubType[sSubType] = true;
         }
        
       });
@@ -126,6 +140,17 @@ sap.ui.define([
         })
       );
 
+      oFb.setProperty("/InvoiceTypeList",
+        Object.keys(mInvType).sort().map(function(s) {
+          return { key: s, text: s };
+        })
+      );
+
+      oFb.setProperty("/SubTypeList",
+        Object.keys(msubType).sort().map(function(s) {
+          return { key: s, text: s };
+        })
+      );
     },
 
     //Ermöglicht die Suche mit *

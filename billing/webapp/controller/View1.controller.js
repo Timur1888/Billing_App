@@ -31,7 +31,7 @@ sap.ui.define([
     JSONModel,
     Filter,
     FilterOperator,
-    Formatter,
+    formatter,
     MessageBox,
     Fragment,
     List,
@@ -56,7 +56,7 @@ sap.ui.define([
 
     return Controller.extend("billing.controller.View1", Object.assign({
 
-        formatter: Formatter,
+        formatter: formatter,
         
 
         onInit: function() {
@@ -73,6 +73,8 @@ sap.ui.define([
                 InvoiceNumberList: [],
                 NettoValueList: [],
                 SalesOrganisationList: [],
+                InvoiceTypeList: [],
+                SubTypeList: [],
             }), "filterModel");
 
             //--------------------------------------------------
@@ -169,7 +171,9 @@ sap.ui.define([
                 InvoiceNo: "MetaData/Object/Data/Basics/Number/Value",
                 NettoValue: "MetaData/Object/Data/Amounts/Net/Value",
                 FacturaDate: "MetaData/Object/Data/Basics/Date/Value/$date",
-                SalesOrganisation: "MetaData/Object/Data/BusinessPartners/0/SalesOrganisation/Value"
+                SalesOrganisation: "MetaData/Object/Data/BusinessPartners/0/SalesOrganisation/Value",
+                InvoiceType: "MetaData/Object/Data/Type",
+                SubType: "MetaData/Object/Data/SubType",
             };
 
             var aFilters = [];
@@ -312,7 +316,7 @@ sap.ui.define([
             if (!oBinding) {
                 return;
             }
-
+            //.replace(/^ccIT_/, "");
             var sValue = (oEvent.getParameter("suggestValue") || oSF.getValue() || "").trim();
 
             if (!sValue) {
