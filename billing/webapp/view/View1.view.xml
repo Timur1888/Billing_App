@@ -166,6 +166,30 @@
                         </fb:control>
                     </fb:FilterGroupItem>
 
+                    <!-- ====== Sales organisation ====== -->
+                    <fb:FilterGroupItem
+                        id="fgiSalesOrg"
+                        name="SalesOrganisation"
+                        label="Sales Organisation"
+                        groupName="Group1"
+                        visibleInFilterBar="true">
+                        <fb:control>
+                            <SearchField
+                                    id="sfSalesOrg"
+                                    width="50%"
+                                    placeholder="Sales Organisation"
+                                    enableSuggestions="true"
+                                    search=".onAddFilter"
+                                    suggest=".onSuggest"
+                                    suggestionItems="{
+                                        path: 'filterModel>/SalesOrganisationList',
+                                        sorter: { path: 'text' }
+                                    }">
+                                <SuggestionItem text="{filterModel>text}" key="{filterModel>key}" />
+                                </SearchField>
+                        </fb:control>
+                    </fb:FilterGroupItem>
+
                     <fb:FilterGroupItem
                         id="fgiFacturaDate"
                         name="FacturaDate"

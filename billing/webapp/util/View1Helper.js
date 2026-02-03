@@ -87,8 +87,7 @@ sap.ui.define([
 
       var mStates = Object.create(null);
       var mNames = Object.create(null);
-      var mInv = Object.create(null); // key = InvoiceNo, value = {InvoiceNo, RecipientName}
-      var mNet = Object.create(null);
+      var mSalesOrg = Object.create(null);
 
       aRows.forEach(function(r) {
         // State
@@ -101,23 +100,12 @@ sap.ui.define([
         if (sName) {
           mNames[sName] = true;
         }
-        // Invoice No.
-        var sInv = r?.MetaData?.Object?.Data?.Basics?.Number?.Value;
-        if (sInv != null && sInv !== "") {
-          var sInvStr = "" + sInv;
-          if (!mInv[sInvStr]) {
-            mInv[sInvStr] = {
-              InvoiceNo: sInvStr,
-              RecipientName: sName
-            };
-          }
+        // Sales Organisation 
+        var sSalesOrg = r?.MetaData?.Object?.Data?.BusinessPartners?.[0]?.SalesOrganisation?.Value || "";
+        if (sSalesOrg) {
+          mSalesOrg[sSalesOrg] = true;
         }
-        // Net Amount
-        var vNet = r?.MetaData?.Object?.Data?.Amounts?.Net?.Value;
-        if (vNet != null && vNet !== "") {
-          var sNet = "" + vNet;
-          mNet[sNet] = true;
-        }
+       
       });
 
       oFb.setProperty("/StatusList",
@@ -132,17 +120,12 @@ sap.ui.define([
         })
       );
 
-      oFb.setProperty("/InvoiceNumberList",
-        Object.keys(mInv).sort().map(function(k) {
-          return mInv[k];
-        })
-      );
-
-      oFb.setProperty("/NettoValueList",
-        Object.keys(mNet).sort().map(function(s) {
+      oFb.setProperty("/SalesOrganisationList",
+        Object.keys(mSalesOrg).sort().map(function(s) {
           return { key: s, text: s };
         })
       );
+
     },
 
     //Ermöglicht die Suche mit *

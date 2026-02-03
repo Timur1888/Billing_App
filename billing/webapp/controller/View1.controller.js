@@ -71,7 +71,8 @@ sap.ui.define([
                 StatusList: [],
                 RecipientNameList: [],
                 InvoiceNumberList: [],
-                NettoValueList: []
+                NettoValueList: [],
+                SalesOrganisationList: [],
             }), "filterModel");
 
             //--------------------------------------------------
@@ -167,7 +168,8 @@ sap.ui.define([
                 RecipientName: "MetaData/Object/Data/Basics/Recipient/Name",
                 InvoiceNo: "MetaData/Object/Data/Basics/Number/Value",
                 NettoValue: "MetaData/Object/Data/Amounts/Net/Value",
-                FacturaDate: "MetaData/Object/Data/Basics/Date/Value/$date"
+                FacturaDate: "MetaData/Object/Data/Basics/Date/Value/$date",
+                SalesOrganisation: "MetaData/Object/Data/BusinessPartners/0/SalesOrganisation/Value"
             };
 
             var aFilters = [];
