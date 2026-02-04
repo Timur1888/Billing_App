@@ -21,6 +21,8 @@ sap.ui.define([
 
       // Daten im Hintergrund laden
       this._loadBackendData();
+      const oAuthModel = new JSONModel({ tokenType: "", token: "" });
+      this.setModel(oAuthModel, "auth");
     },
 
     // öffentliche Methode für Controller
@@ -70,25 +72,28 @@ sap.ui.define([
           return;
         }
 
-        // Falls ihr aus dem Login-Response einen Token braucht, hier auslesen:
         const loginData = await loginResp.json();
-
-        // 2) Daten holen – entweder über Session-Cookie oder (optional) Token
-        const response = await fetch(dataUrl, {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            "Authorization": loginData.Session.TokenType + " " + loginData.Session.Token 
-          },
+        this.getModel("auth").setData({
+          tokenType: loginData?.Session?.TokenType || "",
+          token:     loginData?.Session?.Token || ""
         });
 
-        if (!response.ok) {
-          console.error("Backend Request Error:", response.status, response.statusText);
-          return;
-        }
+        // // 2) Daten holen – entweder über Session-Cookie oder (optional) Token
+        // const response = await fetch(dataUrl, {
+        //   method: "GET",
+        //   credentials: "include",
+        //   headers: {
+        //     "Authorization": loginData.Session.TokenType + " " + loginData.Session.Token 
+        //   },
+        // });
 
-        const json = await response.json();
-        this.getModel("backend").setData(json);
+        // if (!response.ok) {
+        //   console.error("Backend Request Error:", response.status, response.statusText);
+        //   return;
+        // }
+
+        // const json = await response.json();
+        // this.getModel("backend").setData(json);
       } catch (e) {
         console.error("Fehler beim Laden:", e);
       }

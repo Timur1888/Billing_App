@@ -66,15 +66,26 @@ sap.ui.define([
             var oBackend = this.getOwnerComponent().getModel("backend");
             oView.setModel(oBackend, "backend");
 
-            // ValueHelp-Model
+            // Model, das alle Eingaben in den Filterfeldern speichert
             oView.setModel(new JSONModel({
+                /* ===== ValueHelps ===== */
                 StatusList: [],
                 RecipientNameList: [],
-                InvoiceNumberList: [],
-                NettoValueList: [],
                 SalesOrganisationList: [],
                 InvoiceTypeList: [],
                 SubTypeList: [],
+
+                /* ===== User Values ===== */
+                globalSearch: "",
+                selectedStates: [],
+                recipientName: "",
+                nettoValue: "",
+                invoiceNo: "",
+                salesOrganisation: "",
+                invoiceType: "",
+                subType: "",
+                factDateFrom: null,
+                factDateTo: null
             }), "filterModel");
 
             //--------------------------------------------------
@@ -95,11 +106,11 @@ sap.ui.define([
             this.oTable = this.getView().byId("tblBilling");
 
             // Wenn Binding existiert: bei Änderungen ValueHelps neu bauen
-            var oItemsBinding = this.oTable && this.oTable.getBinding("items");
-            if (oItemsBinding) {
-                oItemsBinding.attachChange(this._rebuildValueHelps, this);
-            }
-            this._rebuildValueHelps();
+            // var oItemsBinding = this.oTable && this.oTable.getBinding("items");
+            // if (oItemsBinding) {
+            //     oItemsBinding.attachChange(this._rebuildValueHelps, this);
+            // }
+            // this._rebuildValueHelps();
 
             // FilterBar mit Variant-Mechanik verbinden
             this.oFilterBar.registerFetchData(this.fetchData);
@@ -144,167 +155,45 @@ sap.ui.define([
         },
         //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::Filter::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         //zentrale Funktion, die alle Filter anwendet
-        onSearch: function(oEvent) {
-
-            var oBinding = this.oTable.getBinding("items");
-            if (!oBinding) {
-                return;
-            }
-
-            // Variant als geändert markieren + FilterBar informieren
+        onSearch: async  function(oEvent) {
             this.oSmartVariantManagement.currentVariantSetModified(true);
             this.oFilterBar.fireFilterChange(oEvent || {});
 
-            // Welche Felder sollen global durchsucht werden?
-            var aSearchPaths = [
-                "MetaData/Object/Data/Basics/Number/Value",
-                "MetaData/Object/Data/Basics/Recipient/Name",
-                "MetaData/Object/Data/Basics/Recipient/Email/0/Address",
-                "MetaData/Object/Data/BusinessPartners/1/LeitwegId/Value",
-                "MetaData/Object/Data/BusinessPartners/0/SalesOrganisation/Value"
-            ];
+            const oFilterM = this.getView().getModel("filterModel");
+            const sBaseFilter = "(Process/Manager/Type eq 'ccPM_Billing')";
+            const sUserFilter = (this._buildUserFilter(oFilterM) || "").trim();
 
-            // Mapping: FilterName -> Pfad im backend Row
-            var mFieldToPath = {
-                State: "State",
-                RecipientName: "MetaData/Object/Data/Basics/Recipient/Name",
-                InvoiceNo: "MetaData/Object/Data/Basics/Number/Value",
-                NettoValue: "MetaData/Object/Data/Amounts/Net/Value",
-                FacturaDate: "MetaData/Object/Data/Basics/Date/Value/$date",
-                SalesOrganisation: "MetaData/Object/Data/BusinessPartners/0/SalesOrganisation/Value",
-                InvoiceType: "MetaData/Object/Data/Type",
-                SubType: "MetaData/Object/Data/SubType",
-            };
-
-            var aFilters = [];
-
-            // A) global SearchFilter (FGI name="Search")
-            var oGlobalFGI = this.oFilterBar.getFilterGroupItems().find(function(oFGI) {
-                return oFGI.getName() === "Search";
-            });
-
-            var sGlobalQuery = "";
-            if (oGlobalFGI && oGlobalFGI.getControl() && oGlobalFGI.getControl().getValue) {
-                sGlobalQuery = (oGlobalFGI.getControl().getValue() || "").trim();
+            if (sUserFilter === "__INVALID__") {
+                this.getOwnerComponent().getModel("backend").setProperty("/value", []);
+                return;
             }
-            oGlobalFGI.getControl.getId
-            var oGlobalFilter = this._buildWildcardSearchFilter(sGlobalQuery, aSearchPaths);
-            if (oGlobalFilter) {
-                aFilters.push(oGlobalFilter);
-            }
-            // B) alle anderen FilterGroupItems (MultiComboBox + MultiInput + SearchField/Input)
-            this.oFilterBar.getFilterGroupItems().forEach(function(oFGI) {
-                var sName = oFGI.getName();
-                if (sName === "Search") {
-                    return;
-                } // global schon behandelt
 
-                var oControl = oFGI.getControl();
-                var sPath = mFieldToPath[sName];
-                if (!oControl || !sPath) {
-                    return;
-                }
-
-                // 1) MultiComboBox
-                if (oControl.getSelectedKeys) {
-                    var aKeys = oControl.getSelectedKeys() || [];
-                    if (aKeys.length === 0) {
-                        return;
-                    }
-
-                    aFilters.push(new sap.ui.model.Filter({
-                        filters: aKeys.map(function(sKey) {
-                            return new sap.ui.model.Filter(sPath, sap.ui.model.FilterOperator.Contains, sKey);
-                        }),
-                        and: false
-                    }));
-                    return;
-                }
-                //2) DateRangeSelection
-                if (oControl.getDateValue && oControl.getSecondDateValue) {
-                    var dFrom = oControl.getDateValue(); // Date oder null
-                    var dTo = oControl.getSecondDateValue(); // Date oder null
-
-                    if (!dFrom && !dTo) {
-                        return;
-                    }
-
-                    // JSON hat Millis in $date -> wir filtern numerisch
-                    var nFrom = dFrom ? dFrom.getTime() : null;
-                    var nTo = dTo ? dTo.getTime() : null;
-
-                    // Wichtig: "bis"-Datum inkl. ganzer Tag (23:59:59.999)
-                    if (dTo) {
-                        nTo = new Date(dTo.getFullYear(), dTo.getMonth(), dTo.getDate(), 23, 59, 59, 999).getTime();
-                    }
-
-                    if (nFrom != null && nTo != null) {
-                        aFilters.push(new sap.ui.model.Filter(sPath, sap.ui.model.FilterOperator.BT, nFrom, nTo));
-                    } else if (nFrom != null) {
-                        aFilters.push(new sap.ui.model.Filter(sPath, sap.ui.model.FilterOperator.GE, nFrom));
-                    } else if (nTo != null) {
-                        aFilters.push(new sap.ui.model.Filter(sPath, sap.ui.model.FilterOperator.LE, nTo));
-                    }
-                    return;
-                }
-                // 3) SearchField/Input (z.B. RecipientName als Suggest-SearchField etc.)
-                if (oControl.getValue) {
-                    var sVal = (oControl.getValue() || "").trim();
-                    if (!sVal) {
-                        return;
-                    }
-
-                    if (sName === "NettoValue") {
-
-                        // ⭐ 1) Wildcard explizit erlauben → NICHT returnen
-                        if (sVal.includes("*")) {
-                            var sNeedle = sVal.replace(/\*/g, "").trim(); // "*3*" -> "3"
-
-                            // nur "*" => keine Einschränkung
-                            if (!sNeedle) {
-                            return;
-                            }
-
-                            aFilters.push(new sap.ui.model.Filter({
-                            path: sPath,
-                            test: function (v) {
-                                if (v === null || v === undefined) { return false; }
-                                return String(v).includes(sNeedle);     //wir verwandeln hier die Int Werte aus der Tabelle in String und vergleichen dann
-                            }
-                            }));
-                            return;
-                        }
-
-                        // ⭐ 2) Komma & Spaces tolerieren
-                        var n = Number(String(sVal).replace(/\s/g, "").replace(",", "."));
-
-                        // ⭐ 3) Ungültige Zahl → nichts kaputt machen
-                        if (!Number.isFinite(n)) {
-                            return;
-                        }
-
-                        aFilters.push(
-                            new sap.ui.model.Filter(sPath, sap.ui.model.FilterOperator.EQ, n)
-                        );
-                        return;
-                    }
-
-                    // Standard-Fall (Strings etc.)
-                    var oLocalFilter = this._buildWildcardSearchFilter(sVal, [sPath]);
-                    if (oLocalFilter) {
-                        aFilters.push(oLocalFilter);
-                    }
-                    return;
-                }
-            }.bind(this));
-
-            // C) anwenden
-            try {
-                oBinding.filter(aFilters);
-            } finally {
+            // Wenn nichts gesetzt → keine Abfrage
+            if (!sUserFilter) {
+                sap.m.MessageToast.show("Please set at least one filter");
+                // Tabelle leeren (falls vorher Treffer da waren)
+                this.getOwnerComponent().getModel("backend").setProperty("/value", []);
                 this.oTable.setShowOverlay(false);
+                return;
             }
+
+            const sFilter = sUserFilter ? `(${sBaseFilter}) and (${sUserFilter})` : sBaseFilter; //Userfilter leer -> nimm nur Basefilter. Wenn nicht leer, dann nimm beide Filter
+
+            await this._loadInvoicesServer({ top: 40, skip: 0, filter: sFilter, append: false });
+            
+            this.oTable.setShowOverlay(false);
+            // 🔔 KEINE TREFFER
+            const aRows = this.getOwnerComponent().getModel("backend").getProperty("/value") || [];
+            if (aRows.length === 0) {
+                sap.m.MessageToast.show(
+                "No results were found for the specified filters"
+                );
+            }
+
         },
+
+
+
 
         // suggestion für die Werte aus NettoValue
         onSuggest: function(oEvent) {
@@ -444,7 +333,8 @@ sap.ui.define([
 
         //löscht alle Filter
         onClearFilters: function(oEvent) {
-            var oBinding = this.oTable.getBinding("items");
+            this.getOwnerComponent().getModel("backend").setProperty("/value", []);
+
             (this.oFilterBar.getFilterGroupItems() || []).forEach(function(oFGI) {
                 var oC = oFGI.getControl();
                 if (!oC) {
@@ -481,9 +371,6 @@ sap.ui.define([
             this.oSmartVariantManagement.currentVariantSetModified(false);
             this.oFilterBar.fireFilterChange(oEvent || {});
             this.oTable.setShowOverlay(false);
-            if (oBinding) {
-                oBinding.filter([]);
-            }
         },
 
         //-------------------------------------------------------------DateRangeSelection: Factura Date-----------------------------------------
