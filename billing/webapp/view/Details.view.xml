@@ -55,7 +55,7 @@
                      <!-- Invoice File -->
                      <VBox class="sapUiSmallMarginTop" width="97%">
                         <Title text="Upload (Invoice)" level="H4" />
-                        <upload:UploadSet id="uploadSetInvoice" instantUpload="false" uploadEnabled="true" multiple="false" showIcons="true" terminationEnabled="false" fileTypes="pdf,png,jpg,jpeg" items="{backend&gt;/CurrentInvoice/InvoiceBlobs}" afterItemAdded=".onInvoiceItemAdded" beforeUploadStarts=".onInvoiceBeforeUploadStarts" uploadCompleted=".onInvoiceUploadCompleted" afterItemRemoved=".onAfterInvoiceItemRemoved">
+                        <upload:UploadSet id="uploadSetInvoice" instantUpload="false" uploadEnabled="true" multiple="false" showIcons="true" terminationEnabled="false" fileTypes="pdf,png,jpg,jpeg,docx,doc,xlsx,xls" items="{backend&gt;/CurrentInvoice/InvoiceBlobs}" afterItemAdded=".onInvoiceItemAdded" beforeUploadStarts=".onInvoiceBeforeUploadStarts" uploadCompleted=".onInvoiceUploadCompleted" afterItemRemoved=".onAfterInvoiceItemRemoved">
                            <!-- Wie ein List-Template: -->
                            <upload:items>
                               <upload:UploadSetItem fileName="{backend&gt;FileName}" mediaType="{backend&gt;MimeType}" url="{backend&gt;DownloadUrl}" visibleEdit="false" visibleRemove="true" />
@@ -65,7 +65,7 @@
                      <!-- Attachments -->
                      <VBox class="sapUiSmallMarginTop" width="97%">
                         <Title text="Upload (Attachments)" level="H4" />
-                        <upload:UploadSet id="uploadSetAttachments" instantUpload="false" uploadEnabled="true" multiple="true" showIcons="true" terminationEnabled="false" fileTypes="pdf,png,jpg,jpeg" items="{backend&gt;/CurrentInvoice/AttachmentBlobs}" afterItemAdded=".onAttachmentItemAdded" beforeUploadStarts=".onAttachmentBeforeUploadStarts" uploadCompleted=".onAttachmentUploadCompleted" afterItemRemoved=".onAfterAttachmentItemRemoved">
+                        <upload:UploadSet id="uploadSetAttachments" instantUpload="false" uploadEnabled="true" multiple="true" showIcons="true" terminationEnabled="false" fileTypes="pdf,png,jpg,jpeg,docx,doc,xlsx,xls" items="{backend&gt;/CurrentInvoice/AttachmentBlobs}" afterItemAdded=".onAttachmentItemAdded" beforeUploadStarts=".onAttachmentBeforeUploadStarts" uploadCompleted=".onAttachmentUploadCompleted" afterItemRemoved=".onAfterAttachmentItemRemoved">
                            <upload:items>
                               <upload:UploadSetItem fileName="{backend&gt;FileName}" mediaType="{backend&gt;MimeType}" url="{backend&gt;DownloadUrl}" visibleEdit="false" visibleRemove="true" />
                            </upload:items>
