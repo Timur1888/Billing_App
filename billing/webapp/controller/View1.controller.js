@@ -24,7 +24,7 @@ sap.ui.define([
     "sap/ui/model/Sorter",
     "sap/m/table/columnmenu/QuickSortItem",
     "billing/util/View1Helper",
-    "sap/m/PlacementType",
+    "sap/m/library",
 ], function(
 
     Controller,

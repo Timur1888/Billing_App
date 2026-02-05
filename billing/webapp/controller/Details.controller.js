@@ -129,7 +129,7 @@ sap.ui.define([
       if (!this._pMsgTemplateDialog) {
         this._pMsgTemplateDialog = Fragment.load({
           id: oView.getId(),
-          name: "billing.view.MessageTemplateDialog",
+          name: "billing.view.fragments.MessageTemplateDialog",
           controller: this
         }).then(function (oDialog) {
           oView.addDependent(oDialog);
