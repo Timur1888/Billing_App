@@ -5,22 +5,23 @@ sap.ui.define([
     "use strict";
 
     return {
-        // --- Formatter für Type ccIT_* -> * ---
-        formatInvoiceType: function (sType) {
-            if (!sType) { return ""; }
-            return sType.replace(/^ccIT_/, "");
+        formatAbbreviations: function (sText) {
+            if (!sText) {
+                return "";
+            }
+            // alle bekannten CLARC-Prefixe
+            return sText.replace(
+                /^(ccIT_|ccCS_|ccBF_|ccDM_|ccDS_)/,
+                ""
+            );
         },
-
-        // --- Formatter für Currency ccCS_* -> * ---
-        formatCurrency: function (sCur) {
-            if (!sCur) { return ""; }
-            return sCur.replace(/^ccCS_/, "");
-        },
-
-        // --- Formatter für DeliveryMethod ccDM_* -> * ---
-        formatDeliveryMethod: function (sMethod) {
-            if (!sMethod) { return ""; }
-            return sMethod.replace(/^ccDM_/, "");
+        // Icon je nach Wert
+        formatDeliveryMethodIcon: function (sMethod) {
+        switch (sMethod) {
+            case "ccDM_Email":         return "sap-icon://email";
+            case "ccDM_PostalService": return "sap-icon://print";
+            default:                  return "";
+        }
         },
 
         // --- Formatter für TransferFormat ccBF_* -> * ---
@@ -73,20 +74,79 @@ sap.ui.define([
                     return "sap-icon://paper-plane";
                 case "ccDS_UserAction":
                     return "sap-icon://action";
+                case "ccDS_Error":
+                    return "sap-icon://error";            // ❌ Fehler
+
+                case "ccDS_Deleted":
+                    return "sap-icon://delete";           // 🗑 gelöscht
+
+                case "ccDS_Extraction":
+                    return "sap-icon://search";           // 🔍 Auslesen
+
+                case "ccDS_Capturing":
+                    return "sap-icon://edit";             // ✍ Erfassung
+
+                case "ccDS_Processing":
+                    return "sap-icon://process";          // 🔄 Verarbeitung
+
+                case "ccDS_Delivery":
+                    return "sap-icon://shipping-status";  // 🚚 Versand
+
+                default:
+                    return "sap-icon://question-mark";
+                }
+        },
+
+        formatStatusState: function (sState) {
+        switch (sState) {
+            case "ccDS_Finished":
+            return sap.ui.core.ValueState.Success;
+
+            case "ccDS_UserAction":
+            return sap.ui.core.ValueState.Warning;
+
+            case "ccDS_Error":
+            return sap.ui.core.ValueState.Error;
+
+            case "ccDS_Deleted":
+            return sap.ui.core.ValueState.None;
+
+            case "ccDS_Delivery":
+            case "ccDS_Capturing":
+            case "ccDS_Extraction":
+            case "ccDS_Processing":
+            return sap.ui.core.ValueState.Information;
+
+            default:
+            return sap.ui.core.ValueState.None;
+        }
+        },
+
+
+        // ---------------------------------------------------
+        // Delivery Mode-Formatter
+        // ---------------------------------------------------
+        formatDeliveryModeIcon: function (sDelMode) {
+            switch (sDelMode) {
+                case "ccDM_Unknown":
+                    return "sap-icon://question-mark";
+                case "ccDM_UserAction":
+                    return "sap-icon://action";
                 default:
                     return "sap-icon://question-mark";
             }
         },
 
-        formatStatusState: function (sState) {
-            switch (sState) {
+        // --- Formatter für DeliveryMode ccDM_* -> * ---
+        formatDeliveryModeState: function (sDelMethod) {
+                switch (sDelMethod) {
                 case "ccDS_Finished":
                     return sap.ui.core.ValueState.Success;
                 case "ccDS_UserAction":
                     return sap.ui.core.ValueState.Warning;
                 default:
                     return sap.ui.core.ValueState.None;
-            }
-        }
+            };
+        },
     };
 });

@@ -147,64 +147,6 @@ sap.ui.define([
       );
     },
 
-    // ---------------------------------------------------
-    // Suche
-    // ---------------------------------------------------
-    onSearch: function (oController, oEvent) {
-      const sQuery = oEvent.getParameter("query")?.trim().toLowerCase();
-      const oTable = oController.byId("tblBilling");
-      const oBinding = oTable.getBinding("items");
 
-      if (!oBinding) {
-        return;
-      }
-
-      if (!sQuery) {
-        oBinding.filter([]);
-        return;
-      }
-
-      const aFilters = [
-        new Filter({
-          path: "MetaData/Object/Data/Basics/Number/Value",
-          operator: FilterOperator.Contains,
-          value1: sQuery
-        }),
-        new Filter({
-          path: "MetaData/Object/Data/Basics/Recipient/Name",
-          operator: FilterOperator.Contains,
-          value1: sQuery
-        }),
-        new Filter({
-          path: "MetaData/Object/Data/Basics/Recipient/Email/0/Address",
-          operator: FilterOperator.Contains,
-          value1: sQuery
-        })
-      ];
-
-      const oCombinedFilter = new Filter({
-        filters: aFilters,
-        and: false
-      });
-
-      // Optionaler “no results” Guard wie bei dir:
-      const aData = oController.getOwnerComponent()
-        .getModel("backend")
-        .getProperty("/value") || [];
-
-      const aMatches = aData.filter(item => {
-        const invoice = String(item.MetaData?.Object?.Data?.Basics?.Number?.Value || "").toLowerCase();
-        const name    = String(item.MetaData?.Object?.Data?.Basics?.Recipient?.Name || "").toLowerCase();
-        const email   = String(item.MetaData?.Object?.Data?.Basics?.Recipient?.Email?.[0]?.Address || "").toLowerCase();
-
-        return invoice.includes(sQuery) || name.includes(sQuery) || email.includes(sQuery);
-      });
-
-      if (aMatches.length === 0) {
-        return;
-      }
-
-      oBinding.filter(oCombinedFilter);
-    }
   };
 });

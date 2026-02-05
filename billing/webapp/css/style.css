@@ -29,6 +29,7 @@
     padding-right: 0.5rem;
 }
 
+
 /* Scrollbereich für die PDF-Preview innerhalb des Carousels */
 .pdfPageScroll {
   height: 75vh;      /* mehr Platz als vorher */
@@ -42,4 +43,28 @@
   display: block;
 }
 
+
+
+/* DateRangeSelection Text + Placeholder kleiner */
+.facturaDateSmallText input {
+  font-size: 0.85rem;        /* kleiner Text */
+}
+
+/* Placeholder noch etwas kleiner */
+.facturaDateSmallText input::placeholder {
+  font-size: 0.8rem;
+}
+
+
+/* Ganzer Column Header beim Hover grau machen */
+.sapMTableTH:hover {
+  background-color: var(--sapList_Hover_Background);
+}
+
+/* Sicherstellen, dass der Inhalt die volle Höhe nutzt */
+.sapMTableTH > .sapMTableTHContent {
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
 
