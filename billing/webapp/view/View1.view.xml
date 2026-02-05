@@ -29,13 +29,6 @@
                 <f:actions>
 
                     <Button
-                        id="btnCreate"
-                        text="Create"
-                        type="Emphasized"
-                        class="myCreateBtn"
-                        press=".onCreate" />
-
-                    <Button
                         id="btnDelete"
                         icon="sap-icon://delete"
                         press=".onDelete"
