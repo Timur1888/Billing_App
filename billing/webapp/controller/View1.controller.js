@@ -66,28 +66,6 @@ sap.ui.define([
             var oBackend = this.getOwnerComponent().getModel("backend");
             oView.setModel(oBackend, "backend");
 
-            // Model, das alle Eingaben in den Filterfeldern speichert
-            oView.setModel(new JSONModel({
-                /* ===== ValueHelps ===== */
-                StatusList: [],
-                RecipientNameList: [],
-                SalesOrganisationList: [],
-                InvoiceTypeList: [],
-                SubTypeList: [],
-
-                /* ===== User Values ===== */
-                globalSearch: "",
-                selectedStates: [],
-                recipientName: "",
-                nettoValue: "",
-                invoiceNo: "",
-                salesOrganisation: "",
-                invoiceType: "",
-                subType: "",
-                factDateFrom: null,
-                factDateTo: null
-            }), "filterModel");
-
             //--------------------------------------------------
 
             //-----------FilterBar----------------------
@@ -104,13 +82,6 @@ sap.ui.define([
             this.oFilterBar = this.getView().byId("filterbar");
 
             this.oTable = this.getView().byId("tblBilling");
-
-            // Wenn Binding existiert: bei Änderungen ValueHelps neu bauen
-            // var oItemsBinding = this.oTable && this.oTable.getBinding("items");
-            // if (oItemsBinding) {
-            //     oItemsBinding.attachChange(this._rebuildValueHelps, this);
-            // }
-            // this._rebuildValueHelps();
 
             // FilterBar mit Variant-Mechanik verbinden
             this.oFilterBar.registerFetchData(this.fetchData);
@@ -159,7 +130,7 @@ sap.ui.define([
             this.oSmartVariantManagement.currentVariantSetModified(true);
             this.oFilterBar.fireFilterChange(oEvent || {});
 
-            const oFilterM = this.getView().getModel("filterModel");
+            const oFilterM = this.getOwnerComponent().getModel("filterModel");
             const sBaseFilter = "(Process/Manager/Type eq 'ccPM_Billing')";
             const sUserFilter = (this._buildUserFilter(oFilterM) || "").trim();
 

@@ -100,14 +100,15 @@
                             groupName="Group1"
                             visibleInFilterBar="true">
                             <fb:control>
-                            <MultiComboBox
+                                    <MultiComboBox
                             id="mcbStatus"
-                            name="State"
-                            selectedKeys="{filterModel>/selectedStates}"
-                            selectionChange=".onAddFilter"
-                            items="{filterModel>/StatusList}">
-                            <core:Item key="{filterModel>key}" text="{filterModel>text}" />
-                            </MultiComboBox>
+                         name="State"
+                          selectedKeys="{filterModel>/selectedStates}"
+                          selectionChange=".onAddFilter"
+                         items="{filterModel>/StatusList}">
+                         <core:Item key="{filterModel>key}" text="{path: 'filterModel>text',
+                                                                formatter: '.formatter.formatAbbreviations'}" />
+                         </MultiComboBox>
                             </fb:control>
                         </fb:FilterGroupItem>
                         <!-- ====== Recipient name ====== -->
@@ -217,7 +218,7 @@
                                         sorter: { path: 'text' }
                                     }">
                                 <SuggestionItem
-                                    text="{path:'filterModel>text', formatter:'.formatter.formatInvoiceType'}"
+                                    text="{path:'filterModel>text', formatter:'.formatter.formatAbbreviations'}"
                                     key="{filterModel>key}" />
                                 </SearchField>
                         </fb:control>
@@ -491,9 +492,9 @@
                             <!-- Invoice Type -->
                             <Text id="txtInvoiceType" text="{
                                 path: 'backend>MetaData/Object/Data/Type',
-                                formatter: '.formatter.formatInvoiceType'
+                                formatter: '.formatter.formatAbbreviations'
                             }" />
-
+            
                             <!-- Sub Type -->
                             <Text id="txtSubType" text="{backend>MetaData/Object/Data/SubType}" />
 
@@ -516,7 +517,7 @@
                             <!-- CCY -->
                             <Text id="txtCcyCell" text="{
                                 path: 'backend>MetaData/Object/Data/Amounts/Currency/Value',
-                                formatter: '.formatter.formatCurrency'
+                                formatter: '.formatter.formatAbbreviations'
                             }" />
 
                             <!-- Origin System -->
@@ -545,10 +546,10 @@
 
                             <!-- Transfer Format -->
                             <Text id="txtTransferFormatCell" text="{path: 'backend>MetaData/Object/Data/Basics/TransferFormat',
-                                                                    formatter: '.formatter.formatTransferFormat'}" />
+                                                                    formatter: '.formatter.formatAbbreviations'}" />
 
                             <ObjectStatus
-                                text="{path:'backend>MetaData/Object/Data/Basics/DeliveryMethod', formatter:'.formatter.formatDeliveryMethodText'}"
+                                text="{path:'backend>MetaData/Object/Data/Basics/DeliveryMethod', formatter:'.formatter.formatAbbreviations'}"
                                 icon="{path:'backend>MetaData/Object/Data/Basics/DeliveryMethod', formatter:'.formatter.formatDeliveryMethodIcon'}" />
 
 

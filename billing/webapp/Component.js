@@ -16,23 +16,50 @@ sap.ui.define([
       const oBackendModel = new JSONModel();
       this.setModel(oBackendModel, "backend");
 
+      const oStatisticModel = new JSONModel();
+      this.setModel(oStatisticModel, "statistic")
+
+      const oAuthModel = new JSONModel({ tokenType: "", token: "" });
+      this.setModel(oAuthModel, "auth");
+
+      const oFilterModel = new JSONModel({
+            /* ===== ValueHelps ===== */
+            StatusList: [],
+            RecipientNameList: [],
+            SalesOrganisationList: [],
+            InvoiceTypeList: [],
+            SubTypeList: [],
+
+            /* ===== User Values ===== */
+            globalSearch: "",
+            selectedStates: [],
+            recipientName: "",
+            nettoValue: "",
+            invoiceNo: "",
+            salesOrganisation: "",
+            invoiceType: "",
+            subType: "",
+            factDateFrom: null,
+                factDateTo: null
+        });
+        this.setModel(oFilterModel, "filterModel");
+
       // Routing starten
       this.getRouter().initialize();
 
       // Daten im Hintergrund laden
       this._loadBackendData();
-      const oAuthModel = new JSONModel({ tokenType: "", token: "" });
-      this.setModel(oAuthModel, "auth");
+      
     },
 
     // öffentliche Methode für Controller
     reloadBackendData: function () {
       return this._loadBackendData();
     },
-
+    // MetaData/Object/Data/Type   MetaData/Object/Data/SubType   MetaData/Object/Data/BusinessPartners/0/SalesOrganisation/Value
     _loadBackendData: async function () {
     const loginUrl = "https://test.app.clarc.com/application/api/v1/iam/login";
-    const dataUrl  = "https://test.app.clarc.com/application/api/v1/documenthub/document?$select=Id,History,Rights,State,Process.DeliveryPlan.ExecutionMode,MetaData.Object.Data.Basics.Recipient.Name,MetaData.Object.Data.Basics.Recipient.Email,MetaData.Object.Data.Basics.Number.Value,MetaData.Object.Data.Type,MetaData.Object.Data.SubType,MetaData.Object.Data.Amounts.Net.Value,MetaData.Object.Data.Amounts.Gross.Value,MetaData.Object.Data.Amounts.Currency.Value,MetaData.OriginSystem,MetaData.Object.Data.BusinessPartners,History.Created.Date,MetaData.Object.Data.Basics.Date.Value,MetaData.Object.Data.Basics.SendDate,MetaData.Object.Data.Basics.TransferFormat,MetaData.Object.Data.Basics.DeliveryMethod,MetaData.Object.Data.BusinessPartners,MetaData.Blobs,MetaData&$filter=(Process/Manager/Type%20eq%20%27ccPM_Billing%27)&$top=40&$orderby=CreationDate%20desc";
+    const statisticDataUrl  = "https://test.app.clarc.com/application/api/v1/documenthub/statistic";
 
 
       // TODO: Diese Werte durch eure echten dev-Zugangsdaten ersetzen
@@ -78,25 +105,92 @@ sap.ui.define([
           token:     loginData?.Session?.Token || ""
         });
 
-        // // 2) Daten holen – entweder über Session-Cookie oder (optional) Token
-        // const response = await fetch(dataUrl, {
-        //   method: "GET",
-        //   credentials: "include",
-        //   headers: {
-        //     "Authorization": loginData.Session.TokenType + " " + loginData.Session.Token 
-        //   },
-        // });
+        // 2) Daten holen – entweder über Session-Cookie oder (optional) Token
+        const response = await fetch(statisticDataUrl, {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            "Authorization": loginData.Session.TokenType + " " + loginData.Session.Token 
+          },
+        });
 
-        // if (!response.ok) {
-        //   console.error("Backend Request Error:", response.status, response.statusText);
-        //   return;
-        // }
+        if (!response.ok) {
+          console.error("Backend Request Error:", response.status, response.statusText);
+          return;
+        }
 
-        // const json = await response.json();
-        // this.getModel("backend").setData(json);
+        const json = await response.json();
+        this.getModel("statistic").setData(json);
+        this._rebuildFilter();
       } catch (e) {
         console.error("Fehler beim Laden:", e);
       }
-    }
+      //-----------------------------------------------------------------------------------------------------------------------------------
+  },
+      //baut das Modell filterModel aus, das Modell wird für Filtering eingesetzt
+    _rebuildFilter: function() {
+      var oStatistics = this.getModel("statistic");
+      var oFb = this.getModel("filterModel");
+      if (!oStatistics || !oFb) {
+        return;
+      }
+
+      var aRows = oStatistics.getProperty("/States") || [];
+
+      var mStates = Object.create(null);
+      // var mSalesOrg = Object.create(null);
+      // var mInvType = Object.create(null);
+      // var msubType = Object.create(null);
+
+      aRows.forEach(function(r) {
+        // State
+        var sState = r && r.State;
+        if (sState) {
+          mStates[sState] = true;
+        }
+        // // Sales Organisation 
+        // var sSalesOrg = r?.MetaData?.Object?.Data?.BusinessPartners?.[0]?.SalesOrganisation?.Value || "";
+        // if (sSalesOrg) {
+        //   mSalesOrg[sSalesOrg] = true;
+        // }
+
+        // // Invoice Type
+        // var sInvType = r?.MetaData?.Object?.Data?.Type || "";
+        // if (sInvType) {
+        //   mInvType[sInvType] = true;
+        // }
+        
+        // // Sub Type
+        // var sSubType = r?.MetaData?.Object?.Data?.SubType || "";
+        // if (sSubType) {
+        //   msubType[sSubType] = true;
+        // }
+       
+      });
+
+      oFb.setProperty("/StatusList",
+        Object.keys(mStates).sort().map(function(s) {
+          return { key: s, text: s };
+        })
+      );
+
+      // oFb.setProperty("/SalesOrganisationList",
+      //   Object.keys(mSalesOrg).sort().map(function(s) {
+      //     return { key: s, text: s };
+      //   })
+      // );
+
+      // oFb.setProperty("/InvoiceTypeList",
+      //   Object.keys(mInvType).sort().map(function(s) {
+      //     return { key: s, text: s };
+      //   })
+      // );
+
+      // oFb.setProperty("/SubTypeList",
+      //   Object.keys(msubType).sort().map(function(s) {
+      //     return { key: s, text: s };
+      //   })
+      // );
+    },
   });
 });
