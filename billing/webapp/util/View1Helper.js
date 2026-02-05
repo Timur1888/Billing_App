@@ -228,15 +228,19 @@ _buildUserFilter: function (oFilterM) {
     if (s) aAnd.push(s);
   }
 
-  // 4) SalesOrganisation (Containsi) — Pfad ohne Index
-  const sSales = (oFilterM.getProperty("/salesOrganisation") || "").trim();
-  if (sSales) {
-    const s = this._buildContainsiOrWildcardGroup(
-      sSales,
-      ["MetaData/Object/Data/BusinessPartners/SalesOrganisation/Value"]
-    );
-    if (s) aAnd.push(s);
+  // 4) SalesOrganisation (MultiComboBox, EQ)
+  const aSales = oFilterM.getProperty("/salesOrganisation") || [];
+
+  if (Array.isArray(aSales) && aSales.length) {
+    const sOr = aSales
+      .map(code =>
+        `MetaData/Object/Data/BusinessPartners/0/SalesOrganisation/Value eq '${this._escapeOData(code)}'`
+      )
+      .join(" or ");
+
+    aAnd.push(`(${sOr})`);
   }
+
 
   // 5) InvoiceType (eq)
   let sType = (oFilterM.getProperty("/invoiceType") || "").trim();

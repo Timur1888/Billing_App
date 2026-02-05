@@ -72,6 +72,9 @@
       },
       "filterModel": {
         "type": "sap.ui.model.json.JSONModel"
+      },
+      "billingConfig": {
+        "type": "sap.ui.model.json.JSONModel"
       }
     },
     "resources": {

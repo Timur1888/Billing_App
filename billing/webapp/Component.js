@@ -19,6 +19,9 @@ sap.ui.define([
       const oStatisticModel = new JSONModel();
       this.setModel(oStatisticModel, "statistic")
 
+      const oBillingConfigModel = new JSONModel();
+      this.setModel(oBillingConfigModel, "billingConfig")
+
       const oAuthModel = new JSONModel({ tokenType: "", token: "" });
       this.setModel(oAuthModel, "auth");
 
@@ -36,7 +39,7 @@ sap.ui.define([
             recipientName: "",
             nettoValue: "",
             invoiceNo: "",
-            salesOrganisation: "",
+            salesOrganisation: [],
             invoiceType: "",
             subType: "",
             factDateFrom: null,
@@ -60,6 +63,10 @@ sap.ui.define([
     _loadBackendData: async function () {
     const loginUrl = "https://test.app.clarc.com/application/api/v1/iam/login";
     const statisticDataUrl  = "https://test.app.clarc.com/application/api/v1/documenthub/statistic";
+    const billingConfigUrl =
+        "https://test.app.clarc.com/application/api/v1/bpm/billing" +
+        "?$expand=SalesOrgs" +
+        "&$filter=(Name eq 'Default')";
 
 
       // TODO: Diese Werte durch eure echten dev-Zugangsdaten ersetzen
@@ -105,22 +112,41 @@ sap.ui.define([
           token:     loginData?.Session?.Token || ""
         });
 
-        // 2) Daten holen – entweder über Session-Cookie oder (optional) Token
-        const response = await fetch(statisticDataUrl, {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            "Authorization": loginData.Session.TokenType + " " + loginData.Session.Token 
-          },
-        });
+        // 2) Mehrere Datenquellen parallel laden
+        const [statResp, billingResp] = await Promise.all([
+          fetch(statisticDataUrl, {
+            method: "GET",
+            credentials: "include",
+            headers: {
+              "Authorization":
+                loginData.Session.TokenType + " " + loginData.Session.Token
+            }
+          }),
+          fetch(billingConfigUrl, {
+            method: "GET",
+            credentials: "include",
+            headers: {
+              "Authorization":
+                loginData.Session.TokenType + " " + loginData.Session.Token
+            }
+          })
+        ]);
 
-        if (!response.ok) {
-          console.error("Backend Request Error:", response.status, response.statusText);
+        if (!statResp.ok) {
+          console.error("Statistic Request Error:", statResp.status);
+          return;
+        }
+        if (!billingResp.ok) {
+          console.error("Billing Config Request Error:", billingResp.status);
           return;
         }
 
-        const json = await response.json();
-        this.getModel("statistic").setData(json);
+        const statisticJson = await statResp.json();
+        this.getModel("statistic").setData(statisticJson);
+
+        const billingJson = await billingResp.json();
+        this.getModel("billingConfig").setData(billingJson);
+
         this._rebuildFilter();
       } catch (e) {
         console.error("Fehler beim Laden:", e);
@@ -128,69 +154,54 @@ sap.ui.define([
       //-----------------------------------------------------------------------------------------------------------------------------------
   },
       //baut das Modell filterModel aus, das Modell wird für Filtering eingesetzt
-    _rebuildFilter: function() {
-      var oStatistics = this.getModel("statistic");
-      var oFb = this.getModel("filterModel");
-      if (!oStatistics || !oFb) {
-        return;
-      }
+_rebuildFilter: function () {
+  const oStatistics    = this.getModel("statistic");
+  const oBillingConfig = this.getModel("billingConfig");
+  const oFb            = this.getModel("filterModel");
 
-      var aRows = oStatistics.getProperty("/States") || [];
+  if (!oStatistics || !oBillingConfig || !oFb) {
+    return;
+  }
 
-      var mStates = Object.create(null);
-      // var mSalesOrg = Object.create(null);
-      // var mInvType = Object.create(null);
-      // var msubType = Object.create(null);
+  // --------------------
+  // A) Status aus /States
+  // --------------------
+  const aStateRows = oStatistics.getProperty("/States") || [];
+  const mStates = Object.create(null);
 
-      aRows.forEach(function(r) {
-        // State
-        var sState = r && r.State;
-        if (sState) {
-          mStates[sState] = true;
-        }
-        // // Sales Organisation 
-        // var sSalesOrg = r?.MetaData?.Object?.Data?.BusinessPartners?.[0]?.SalesOrganisation?.Value || "";
-        // if (sSalesOrg) {
-        //   mSalesOrg[sSalesOrg] = true;
-        // }
+  aStateRows.forEach(function (r) {
+    const sState = r && r.State;
+    if (sState) mStates[sState] = true;
+  });
 
-        // // Invoice Type
-        // var sInvType = r?.MetaData?.Object?.Data?.Type || "";
-        // if (sInvType) {
-        //   mInvType[sInvType] = true;
-        // }
-        
-        // // Sub Type
-        // var sSubType = r?.MetaData?.Object?.Data?.SubType || "";
-        // if (sSubType) {
-        //   msubType[sSubType] = true;
-        // }
-       
-      });
+  oFb.setProperty(
+    "/StatusList",
+    Object.keys(mStates).sort().map(function (s) {
+      return { key: s, text: s };
+    })
+  );
 
-      oFb.setProperty("/StatusList",
-        Object.keys(mStates).sort().map(function(s) {
-          return { key: s, text: s };
-        })
-      );
+  // -------------------------------------
+  // B) Sales Orgs aus billingConfig.value[0].SalesOrgs
+  // -------------------------------------
+  const aCfg = oBillingConfig.getProperty("/value") || [];
+  const aSalesOrgs = (aCfg[0] && Array.isArray(aCfg[0].SalesOrgs)) ? aCfg[0].SalesOrgs : [];
 
-      // oFb.setProperty("/SalesOrganisationList",
-      //   Object.keys(mSalesOrg).sort().map(function(s) {
-      //     return { key: s, text: s };
-      //   })
-      // );
+  const mSales = Object.create(null);
 
-      // oFb.setProperty("/InvoiceTypeList",
-      //   Object.keys(mInvType).sort().map(function(s) {
-      //     return { key: s, text: s };
-      //   })
-      // );
+  aSalesOrgs.forEach(function (o) {
+    const sCode = (o && o.Code) ? String(o.Code).trim() : "";
+    if (sCode) {
+      mSales[sCode] = true;
+    }
+  });
 
-      // oFb.setProperty("/SubTypeList",
-      //   Object.keys(msubType).sort().map(function(s) {
-      //     return { key: s, text: s };
-      //   })
-      // );
-    },
+  oFb.setProperty(
+    "/SalesOrganisationList",
+    Object.keys(mSales).sort().map(function (s) {
+      return { key: s, text: s };
+    })
+  );
+},
   });
 });

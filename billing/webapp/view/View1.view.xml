@@ -179,7 +179,7 @@
                         label="Sales Organisation"
                         groupName="Group1"
                         visibleInFilterBar="true">
-                        <fb:control>
+                        <!-- <fb:control>
                             <SearchField
                                     id="sfSalesOrg"
                                     width="50%"
@@ -194,7 +194,17 @@
                                     }">
                                 <SuggestionItem text="{filterModel>text}" key="{filterModel>key}" />
                                 </SearchField>
-                        </fb:control>
+                        </fb:control> -->
+                        <fb:control>
+                            <MultiComboBox
+                            id="mcbSalesOrg"
+                            name="SalesOrganisation"
+                            selectedKeys="{filterModel>/salesOrganisation}"
+                            selectionChange=".onAddFilter"
+                            items="{filterModel>/SalesOrganisationList}">
+                            <core:Item key="{filterModel>key}" text="{filterModel>text}" />
+                            </MultiComboBox>
+                            </fb:control>
                     </fb:FilterGroupItem>
 
                     <!-- ====== Invoice Type ====== -->
