@@ -96,7 +96,10 @@
                          name="State"
                           selectedKeys="{filterModel>/selectedStates}"
                           selectionChange=".onAddFilter"
-                         items="{filterModel>/StatusList}">
+                            items="{
+                                path: 'filterModel>/StatusList',
+                                templateShareable: false
+                            }">
                          <core:Item key="{filterModel>key}" text="{path: 'filterModel>text',
                                                                 formatter: '.formatter.formatAbbreviations'}" />
                          </MultiComboBox>
