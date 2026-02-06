@@ -242,18 +242,20 @@ _buildUserFilter: function (oFilterM) {
   }
 
 
-  // 5) InvoiceType (eq)
-  let sType = (oFilterM.getProperty("/invoiceType") || "").trim();
+  // 5) InvoiceType (MultiComboBox, EQ)
+  const aTypesRaw = oFilterM.getProperty("/invoiceType") || []; // z.B. ["Invoice","CreditNote"] oder ["ccIT_Invoice"]
 
-  if (sType) {
-    // User gibt z.B. "Invoice" ein → wir machen "ccIT_Invoice"
-    if (!sType.startsWith("ccIT_")) {
-      sType = "ccIT_" + sType;
-    }
+  if (Array.isArray(aTypesRaw) && aTypesRaw.length) {
+    const aTypes = aTypesRaw
+      .map(s => String(s).trim())
+      .filter(Boolean)
+      .map(s => (s.startsWith("ccIT_") ? s : "ccIT_" + s));
 
-    aAnd.push(
-      `(MetaData/Object/Data/Type eq '${this._escapeOData(sType)}')`
-    );
+    const sOr = aTypes
+      .map(s => `MetaData/Object/Data/Type eq '${this._escapeOData(s)}'`)
+      .join(" or ");
+
+    aAnd.push(`(${sOr})`);
   }
 
   // 6) SubType (eq)

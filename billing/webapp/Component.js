@@ -40,7 +40,7 @@ sap.ui.define([
             nettoValue: "",
             invoiceNo: "",
             salesOrganisation: [],
-            invoiceType: "",
+            invoiceType: [],
             subType: "",
             factDateFrom: null,
                 factDateTo: null
