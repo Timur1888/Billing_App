@@ -36,12 +36,6 @@
                         enabled="false" />
 
                     <Button
-                        id="btnRefresh"
-                        icon="sap-icon://refresh"
-                        press="onReload"
-                        type="Transparent" />
-
-                    <Button
                         id="btnSettings"
                         icon="sap-icon://action-settings"
                         press=".onSettings" />
