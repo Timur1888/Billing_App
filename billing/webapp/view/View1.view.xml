@@ -135,7 +135,7 @@
                             <SearchField
                                 id="sfNettoValue"
                                 width="50%"
-                                placeholder="Netto Value"
+                                placeholder="From - to"
                                 value="{filterModel>/nettoValue}"
                                 search=".onAddFilter" 
                                 change=".onAddFilter"/>

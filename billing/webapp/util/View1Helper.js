@@ -338,33 +338,55 @@ _buildContainsiOrWildcardGroup: function (sQuery, aPaths) {
 
 
 /**
- * NettoValue numeric: unterstützt, aktuell nur mit eq
+ * NettoValue numeric:
+ * - "3000"            -> (path eq 3000)
+ * - "7000-8000"       -> (path ge 7000 and path le 8000)
+ * - "7000 - 8000"     -> dito
  */
 _buildNettoFilterForClarc: function (sInput, sPath) {
   const raw = String(sInput || "").trim();
   if (!raw) return "";
 
-  // Wenn User "*" nutzt: aktuell nicht unterstützt
   if (raw.includes("*")) {
-    sap.m.MessageToast.show("Netto Value: Wildcards (*) sind aktuell nicht unterstützt. Bitte exakten Betrag eingeben.");
+    sap.m.MessageToast.show("Netto Value: Wildcards (*) sind aktuell nicht unterstützt. Bitte exakten Betrag oder Bereich eingeben (z.B. 7000-8000).");
     return "__INVALID__";
   }
-
-  // tolerant parsen: "1.500,00 €" -> 1500
-  const cleaned = raw
-    .replace(/[^\d,.\s-]/g, "")   // alles außer Zahl/Komma/Punkt/Minus/Space weg (z.B. €)
-    .replace(/\s/g, "")
-    .replace(/\./g, "")
-    .replace(",", ".");
-
-  const n = Number(cleaned);
-  if (!Number.isFinite(n)) {
-    sap.m.MessageToast.show("Netto Value: Bitte eine gültige Zahl eingeben (z.B. 1500 oder 1500,00).");
+  // Helper: Zahl tolerant parsen (auch "1.500,00 €" -> 1500)
+  const parseNum = (s) => {
+    const cleaned = String(s || "")
+      .replace(/[^\d,.\s-]/g, "")  // € usw. raus
+      .replace(/\s/g, "")
+      .replace(/\./g, "")
+      .replace(",", ".");
+    const n = Number(cleaned);
+    return Number.isFinite(n) ? n : null;
+  };
+  // Range-Erkennung: genau ein "-" zwischen zwei Teilen
+  // akzeptiert "7000-8000" oder "7000 - 8000"
+  const m = raw.match(/^\s*(.+?)\s*-\s*(.+?)\s*$/);
+  if (m) {
+    const nFrom = parseNum(m[1]);
+    const nTo   = parseNum(m[2]);
+    if (nFrom === null || nTo === null) {
+      sap.m.MessageToast.show("Netto Value: Bitte zwei gültige Zahlen eingeben (z.B. 7000-8000).");
+      return "__INVALID__";
+    }
+    if (nFrom > nTo) {
+      sap.m.MessageToast.show("Netto Value: 'Von' muss kleiner oder gleich 'Bis' sein.");
+      return "__INVALID__";
+    }
+    return `(${sPath} ge ${nFrom} and ${sPath} le ${nTo})`;
+  }
+  // Single value
+  const n = parseNum(raw);
+  if (n === null) {
+    sap.m.MessageToast.show("Netto Value: Bitte eine gültige Zahl eingeben (z.B. 1500) oder einen Bereich (z.B. 7000-8000).");
     return "__INVALID__";
   }
 
   return `(${sPath} eq ${n})`;
 },
+
 
 /**
  * DateRange -> UTC Datetime mit Tagesgrenzen wie in eurem Beispiel:
