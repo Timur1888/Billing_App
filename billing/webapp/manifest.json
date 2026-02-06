@@ -58,7 +58,9 @@
       "i18n": {
         "type": "sap.ui.model.resource.ResourceModel",
         "settings": {
-          "bundleName": "billing.i18n.i18n"
+          "bundleName": "billing.i18n.i18n",
+          "supportedLocales": ["de", "en"],
+          "fallbackLocale": "en"
         }
       },
       "statistic": {
