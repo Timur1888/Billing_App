@@ -190,7 +190,7 @@
                         groupName="Group1"
                         visibleInFilterBar="true">
                         <fb:control>
-                            <SearchField
+                            <!-- <SearchField
                                     id="sfInvType"
                                     width="50%"
                                     value="{filterModel>/invoiceType}"
@@ -205,7 +205,15 @@
                                 <SuggestionItem
                                     text="{path:'filterModel>text', formatter:'.formatter.formatAbbreviations'}"
                                     key="{filterModel>key}" />
-                                </SearchField>
+                                </SearchField> -->
+                            <MultiComboBox
+                                id="mcbInvType"
+                                name="InvoiceType"
+                                selectedKeys="{filterModel>/invoiceType}"
+                                selectionChange=".onAddFilter"
+                                items="{filterModel>/InvoiceTypeList}">
+                                <core:Item key="{filterModel>key}" text="{filterModel>text}" />
+                            </MultiComboBox>
                         </fb:control>
                     </fb:FilterGroupItem>
 

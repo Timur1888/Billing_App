@@ -202,6 +202,17 @@ _rebuildFilter: function () {
       return { key: s, text: s };
     })
   );
+  // -------------------------------------
+  // C) Invoice Type (hard codiert)
+  // -------------------------------------
+    var mTypes = ["CreditNote", "Invoice", "Common"];
+
+    oFb.setProperty(
+      "/InvoiceTypeList",
+      mTypes.slice().sort().map(function (s) {
+          return { key: s, text: s };
+        })
+    );
 },
   });
 });
