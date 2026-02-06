@@ -16,8 +16,8 @@ sap.ui.define([
       const oBackendModel = new JSONModel();
       this.setModel(oBackendModel, "backend");
 
-      const oStatisticModel = new JSONModel();
-      this.setModel(oStatisticModel, "statistic")
+      // const oStatisticModel = new JSONModel();
+      // this.setModel(oStatisticModel, "statistic")
 
       const oBillingConfigModel = new JSONModel();
       this.setModel(oBillingConfigModel, "billingConfig")
@@ -59,10 +59,10 @@ sap.ui.define([
     reloadBackendData: function () {
       return this._loadBackendData();
     },
-    // MetaData/Object/Data/Type   MetaData/Object/Data/SubType   MetaData/Object/Data/BusinessPartners/0/SalesOrganisation/Value
+    
     _loadBackendData: async function () {
     const loginUrl = "https://test.app.clarc.com/application/api/v1/iam/login";
-    const statisticDataUrl  = "https://test.app.clarc.com/application/api/v1/documenthub/statistic";
+    // const statisticDataUrl  = "https://test.app.clarc.com/application/api/v1/documenthub/statistic";
     const billingConfigUrl =
         "https://test.app.clarc.com/application/api/v1/bpm/billing" +
         "?$expand=SalesOrgs" +
@@ -113,15 +113,16 @@ sap.ui.define([
         });
 
         // 2) Mehrere Datenquellen parallel laden
-        const [statResp, billingResp] = await Promise.all([
-          fetch(statisticDataUrl, {
-            method: "GET",
-            credentials: "include",
-            headers: {
-              "Authorization":
-                loginData.Session.TokenType + " " + loginData.Session.Token
-            }
-          }),
+        const [billingResp] = await Promise.all([
+        // const [statResp, billingResp] = await Promise.all([
+          // fetch(statisticDataUrl, {
+          //   method: "GET",
+          //   credentials: "include",
+          //   headers: {
+          //     "Authorization":
+          //       loginData.Session.TokenType + " " + loginData.Session.Token
+          //   }
+          // }),
           fetch(billingConfigUrl, {
             method: "GET",
             credentials: "include",
@@ -132,17 +133,17 @@ sap.ui.define([
           })
         ]);
 
-        if (!statResp.ok) {
-          console.error("Statistic Request Error:", statResp.status);
-          return;
-        }
+        // if (!statResp.ok) {
+        //   console.error("Statistic Request Error:", statResp.status);
+        //   return;
+        // }
         if (!billingResp.ok) {
           console.error("Billing Config Request Error:", billingResp.status);
           return;
         }
 
-        const statisticJson = await statResp.json();
-        this.getModel("statistic").setData(statisticJson);
+        // const statisticJson = await statResp.json();
+        // this.getModel("statistic").setData(statisticJson);
 
         const billingJson = await billingResp.json();
         this.getModel("billingConfig").setData(billingJson);
@@ -155,31 +156,42 @@ sap.ui.define([
   },
       //baut das Modell filterModel aus, das Modell wird für Filtering eingesetzt
 _rebuildFilter: function () {
-  const oStatistics    = this.getModel("statistic");
+  // const oStatistics    = this.getModel("statistic");
   const oBillingConfig = this.getModel("billingConfig");
   const oFb            = this.getModel("filterModel");
 
-  if (!oStatistics || !oBillingConfig || !oFb) {
+  // if (!oStatistics || !oBillingConfig || !oFb) {
+  //   return;
+  // }
+    if (!oBillingConfig || !oFb) {
     return;
   }
 
   // --------------------
   // A) Status aus /States
   // --------------------
-  const aStateRows = oStatistics.getProperty("/States") || [];
-  const mStates = Object.create(null);
-
-  aStateRows.forEach(function (r) {
-    const sState = r && r.State;
-    if (sState) mStates[sState] = true;
-  });
+  var mStates = ["Finished", "User Action", "Error"];
 
   oFb.setProperty(
-    "/StatusList",
-    Object.keys(mStates).sort().map(function (s) {
+  "/StatusList",
+  mStates.slice().sort().map(function (s) {
       return { key: s, text: s };
     })
-  );
+);
+  // const aStateRows = oStatistics.getProperty("/States") || [];
+  // const mStates = Object.create(null);
+
+  // aStateRows.forEach(function (r) {
+  //   const sState = r && r.State;
+  //   if (sState) mStates[sState] = true;
+  // });
+
+  // oFb.setProperty(
+  //   "/StatusList",
+  //   Object.keys(mStates).sort().map(function (s) {
+  //     return { key: s, text: s };
+  //   })
+  // );
 
   // -------------------------------------
   // B) Sales Orgs aus billingConfig.value[0].SalesOrgs

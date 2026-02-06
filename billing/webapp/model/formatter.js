@@ -75,22 +75,7 @@ sap.ui.define([
                 case "ccDS_UserAction":
                     return "sap-icon://action";
                 case "ccDS_Error":
-                    return "sap-icon://error";            // ❌ Fehler
-
-                case "ccDS_Deleted":
-                    return "sap-icon://delete";           // 🗑 gelöscht
-
-                case "ccDS_Extraction":
-                    return "sap-icon://search";           // 🔍 Auslesen
-
-                case "ccDS_Capturing":
-                    return "sap-icon://edit";             // ✍ Erfassung
-
-                case "ccDS_Processing":
-                    return "sap-icon://process";          // 🔄 Verarbeitung
-
-                case "ccDS_Delivery":
-                    return "sap-icon://shipping-status";  // 🚚 Versand
+                    return "sap-icon://error";            
 
                 default:
                     return "sap-icon://question-mark";
@@ -107,15 +92,6 @@ sap.ui.define([
 
             case "ccDS_Error":
             return sap.ui.core.ValueState.Error;
-
-            case "ccDS_Deleted":
-            return sap.ui.core.ValueState.None;
-
-            case "ccDS_Delivery":
-            case "ccDS_Capturing":
-            case "ccDS_Extraction":
-            case "ccDS_Processing":
-            return sap.ui.core.ValueState.Information;
 
             default:
             return sap.ui.core.ValueState.None;

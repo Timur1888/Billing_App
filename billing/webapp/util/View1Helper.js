@@ -201,12 +201,25 @@ _buildUserFilter: function (oFilterM) {
 
   // 1) Status (eq, OR)
   const aStatuses = oFilterM.getProperty("/selectedStates") || [];
-  if (aStatuses.length) {
-    const sOr = aStatuses
-      .map(x => `State eq '${this._escapeOData(x)}'`)
-      .join(" or ");
-    aAnd.push(`(${sOr})`);
+  if (Array.isArray(aStatuses) && aStatuses.length) {
+    const aNormalized = aStatuses.map(s => {
+      if (!s) {
+        return null;
+      }
+      let sState = String(s).trim(); //entfernt Leerzeichen am Anfang und Ende eines Strings
+      sState = sState.replace(/\s+/g, ""); // "User Action" → "UserAction"
+        sState = "ccDS_" + sState;
+      return sState;
+    }).filter(Boolean);
+    if (aNormalized.length) {
+      const sOr = aNormalized
+        .map(s => `State eq '${this._escapeOData(s)}'`)
+        .join(" or ");
+
+      aAnd.push(`(${sOr})`);
+    }
   }
+
 
   // 2) Recipient Name (Containsi)
   const sRec = (oFilterM.getProperty("/recipientName") || "").trim();

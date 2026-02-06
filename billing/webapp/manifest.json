@@ -63,9 +63,6 @@
           "fallbackLocale": "en"
         }
       },
-      "statistic": {
-        "type": "sap.ui.model.json.JSONModel"
-      },
       "backend": {
         "type": "sap.ui.model.json.JSONModel"
       },
