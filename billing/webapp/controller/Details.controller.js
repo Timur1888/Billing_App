@@ -82,9 +82,10 @@ sap.ui.define([
       var oExisting = oModel.getProperty(sPath);
 
       if (!oExisting) {
+        var oBackend = this.getOwnerComponent().getModel("backend");
         oModel.setProperty(sPath, {
-          subject: "",
-          body: "",
+          subject: oBackend.getProperty("/CurrentInvoice/MetaData/Object/Data/Subject"),
+          body: oBackend.getProperty("/CurrentInvoice/MetaData/Object/Data/AdditionalInformation"),
           selectedLanguageKey: "en"
         });
       }
