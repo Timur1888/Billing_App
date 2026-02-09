@@ -174,7 +174,7 @@
          <Toolbar>
             <ToolbarSpacer />
             <Button text="Save" type="Transparent" />
-            <Button text="Send" type="Emphasized" class="sendButton" press=".onSendInvoice"/>
+            <Button text="Send" type="Emphasized" enabled="{send>/canSend}" press=".onSendInvoice"/>
          </Toolbar>
       </footer>
    </Page>

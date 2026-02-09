@@ -21,7 +21,7 @@ sap.ui.define([
           logs: [],
           lastDocId: "",
           billingId: "",
-          historyDocId: ""
+          historyDocId: "",
         }), "history");
       }
 
@@ -30,7 +30,8 @@ sap.ui.define([
         deliveryMethod: "email",
         recipient: "",
         cc: "",
-        bcc: ""
+        bcc: "",
+        canSend: true
       });
       this.getView().setModel(oSendModel, "send");
 
@@ -292,6 +293,13 @@ sap.ui.define([
                 model: "backend"
             });
 
+            // Recipient name aus Backend holen
+            var oSend = this.getView().getModel("send");
+            var oBackend = this.getOwnerComponent().getModel("backend");
+            oSend.setProperty("/recipient", oBackend.getProperty("/CurrentInvoice/MetaData/Object/Data/Basics/Recipient/Email/0/Address")); 
+            oSend.setProperty("/canSend", true); //Send-Button klickbar machen
+
+
             //Template an die Rechnung binden
       if (sInvoiceId) {
         this._ensureTemplateForInvoice(sInvoiceId);
@@ -457,6 +465,8 @@ onSendInvoice: async function () {
   const oModel   = this.getOwnerComponent().getModel("backend");
   const oTemplate = oView.getModel("template");
 
+    // Button sofort ausgrauen
+  oSend.setProperty("/canSend", false);
   // ---------------------------
   // Helper: String → [{Address}]
   // ---------------------------
@@ -546,6 +556,7 @@ onSendInvoice: async function () {
     sap.m.MessageToast.show("Invoice sent successfully.");
 
   } catch (e) {
+    oSend.setProperty("/canSend", true);
     sap.m.MessageBox.error(`Send failed: ${e?.message || e}`);
   } finally {
     oView.setBusy(false);
