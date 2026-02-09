@@ -135,6 +135,7 @@ sap.ui.define([
         //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::Filter::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         //zentrale Funktion, die alle Filter anwendet
         onSearch: async  function(oEvent) {
+            var oBackend = this.getOwnerComponent().getModel("backend");
             if (!this._bSvmReady) {
                 return; // nur frühe Init-Searchs blocken
             }
@@ -146,15 +147,36 @@ sap.ui.define([
             const sUserFilter = (this._buildUserFilter(oFilterM) || "").trim();
 
             if (sUserFilter === "__INVALID__") {
-                this.getOwnerComponent().getModel("backend").setProperty("/value", []);
+                oBackend.setProperty("/value", []);
                 return;
             }
 
-            // Wenn nichts gesetzt → keine Abfrage
+            // Wenn nichts gesetzt → erste 40 Rechnungen holen
             if (!sUserFilter) {
-                sap.m.MessageToast.show("Please set at least one filter");
-                // Tabelle leeren (falls vorher Treffer da waren)
-                this.getOwnerComponent().getModel("backend").setProperty("/value", []);
+                try {
+                    const first40BillingsURL = "https://test.app.clarc.com/application/api/v1/documenthub/document?$select=Id,History,Rights,State,Process.DeliveryPlan.ExecutionMode,MetaData.Object.Data.Basics.Recipient.Name,MetaData.Object.Data.Basics.Recipient.Email,MetaData.Object.Data.Basics.Number.Value,MetaData.Object.Data.Type,MetaData.Object.Data.SubType,MetaData.Object.Data.Amounts.Net.Value,MetaData.Object.Data.Amounts.Gross.Value,MetaData.Object.Data.Amounts.Currency.Value,MetaData.OriginSystem,MetaData.Object.Data.BusinessPartners,History.Created.Date,MetaData.Object.Data.Basics.Date.Value,MetaData.Object.Data.Basics.SendDate,MetaData.Object.Data.Basics.TransferFormat,MetaData.Object.Data.Basics.DeliveryMethod,MetaData.Object.Data.BusinessPartners,MetaData.Blobs,MetaData&$filter=(Process/Manager/Type%20eq%20%27ccPM_Billing%27)%20and%20(State%20eq%20%27ccDS_Finished%27)%20or%20(State%20eq%20%27ccDS_UserAction%27)%20or%20(State%20eq%20%27ccDS_Error%27)&$top=40&$orderby=CreationDate%20desc";
+                    var oAuthModel = this.getOwnerComponent().getModel("auth");
+                    // 2) Mehrere Datenquellen parallel laden
+                    const [billingResp] = await Promise.all([
+                    fetch(first40BillingsURL, {
+                        method: "GET",
+                        credentials: "include",
+                        headers: {
+                        "Authorization":
+                            (oAuthModel?.getProperty("/tokenType") || "Bearer").trim() + " " + (oAuthModel?.getProperty("/token")).trim()
+                        }
+                    })
+                    ]);
+                    if (!billingResp.ok) {
+                    console.error("Billing Request Error:", billingResp.status);
+                    return;
+                    }
+
+                    const billingJson = await billingResp.json();
+                    oBackend.setData(billingJson);
+                } catch (e) {
+                    console.error("Fehler beim Laden:", e);
+                }
                 this.oTable.setShowOverlay(false);
                 return;
             }
@@ -369,7 +391,7 @@ sap.ui.define([
 
         //löscht alle Filter
         onClearFilters: function(oEvent) {
-            this.getOwnerComponent().getModel("backend").setProperty("/value", []);
+            // this.getOwnerComponent().getModel("backend").setProperty("/value", []);
 
             (this.oFilterBar.getFilterGroupItems() || []).forEach(function(oFGI) {
                 var oC = oFGI.getControl();
