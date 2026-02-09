@@ -178,52 +178,54 @@ sap.ui.define([
         // Settings-Button (Spalten ein-/ausblenden)
         // ---------------------------------------------------
         _createColumnSettingsPopover: function () {
-            if (this._oColumnPopover) {
-                return this._oColumnPopover;
-            }
+        if (this._oColumnPopover) {
+            return this._oColumnPopover;
+        }
 
-            const oTable   = this.byId("tblBilling");
-            const aColumns = oTable.getColumns();
+        const oTable   = this.byId("tblBilling");
+        const aColumns = oTable.getColumns();
 
-            const oList = new List({
-                items: aColumns.map(col => {
-                    const sColLabel = col.getHeader().getText();
+        const oList = new sap.m.List({
+            items: aColumns.map(col => {
+            const sColLabel = col.getHeader().getText();
 
-                    return new CustomListItem({
-                        content: new HBox({
-                            items: [
-                                new CheckBox({
-                                    selected: col.getVisible(),
-                                    text: sColLabel,
-                                    select: function (oEvent) {
-                                        const bSelected = oEvent.getParameter("selected");
-                                        col.setVisible(bSelected);
-                                    }
-                                }).addStyleClass("sapUiSmallMarginEnd")
-                            ]
-                        })
-                    });
+            return new sap.m.CustomListItem({
+                content: new sap.m.HBox({
+                items: [
+                    new sap.m.CheckBox({
+                    selected: col.getVisible(),
+                    text: sColLabel,
+                    select: function (oEvent) {
+                        col.setVisible(oEvent.getParameter("selected"));
+                    }
+                    }).addStyleClass("sapUiSmallMarginEnd")
+                ]
                 })
             });
+            })
+        });
 
-            this._oColumnPopover = new Popover({
-                placement: PlacementType.Bottom,
-                title: "Columns",
-                contentWidth: "250px",
-                content: oList
-            });
+        this._oColumnPopover = new sap.m.Popover({
+            placement: sap.m.PlacementType.Auto,   // <= wichtig
+            title: "Columns",
+            contentWidth: "16rem",
+            content: oList
+        });
 
-            this.getView().addDependent(this._oColumnPopover);
-
-            return this._oColumnPopover;
+        this.getView().addDependent(this._oColumnPopover);
+        return this._oColumnPopover;
         },
 
         onSettings: function (oEvent) {
-            const oPopover = this._createColumnSettingsPopover();
-            oPopover.openBy(oEvent.getSource());
+        const oButton = oEvent.getSource();
+        const oPop = this._createColumnSettingsPopover();
+        // Toggle: wenn offen -> zu, sonst auf
+        if (oPop.isOpen && oPop.isOpen()) {
+            oPop.close();
+            return;
+        }
+        oPop.openBy(oButton);
         },
-
-
 
         // suggestion für die Werte aus NettoValue
         onSuggest: function(oEvent) {

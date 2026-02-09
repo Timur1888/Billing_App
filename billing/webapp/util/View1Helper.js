@@ -348,7 +348,7 @@ _buildNettoFilterForClarc: function (sInput, sPath) {
   if (!raw) return "";
 
   if (raw.includes("*")) {
-    sap.m.MessageToast.show("Netto Value: Wildcards (*) sind aktuell nicht unterstützt. Bitte exakten Betrag oder Bereich eingeben (z.B. 7000-8000).");
+    sap.m.MessageToast.show("Ungültige Eingabe");
     return "__INVALID__";
   }
   // Helper: Zahl tolerant parsen (auch "1.500,00 €" -> 1500)

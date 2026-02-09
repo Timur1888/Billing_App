@@ -48,9 +48,7 @@
         <f:header>
             <f:DynamicPageHeader id="dphHeader" pinnable="true">
                 <f:content>
-
-                <Button text="Clear Filters" type="Transparent" press=".onClearFilters"/>
-                                                      
+                             
                 <!-- Hier ist der Bereich wie im Screenshot (Filter + Search) -->
                <fb:FilterBar id="filterbar" persistencyKey="myPersKey" 
                useToolbar="false" search=".onSearch" 
@@ -187,22 +185,6 @@
                         groupName="Group1"
                         visibleInFilterBar="true">
                         <fb:control>
-                            <!-- <SearchField
-                                    id="sfInvType"
-                                    width="50%"
-                                    value="{filterModel>/invoiceType}"
-                                    placeholder="Invoice Type"
-                                    enableSuggestions="true"
-                                    search=".onAddFilter"
-                                    suggest=".onSuggest"
-                                    suggestionItems="{
-                                        path: 'filterModel>/InvoiceTypeList',
-                                        sorter: { path: 'text' }
-                                    }">
-                                <SuggestionItem
-                                    text="{path:'filterModel>text', formatter:'.formatter.formatAbbreviations'}"
-                                    key="{filterModel>key}" />
-                                </SearchField> -->
                             <MultiComboBox
                                 id="mcbInvType"
                                 name="InvoiceType"
@@ -262,6 +244,13 @@
                         
                     </fb:filterGroupItems>
                 </fb:FilterBar>
+                <HBox width="100%" justifyContent="End" class="sapUiTinyMarginTop">
+                <Button
+                    text="Clear Filters"
+                    type="Transparent"
+                    press=".onClearFilters"
+                    class="btnClearFiltersOffset"/>
+                </HBox>   
         </f:content>
             </f:DynamicPageHeader>
         </f:header>
