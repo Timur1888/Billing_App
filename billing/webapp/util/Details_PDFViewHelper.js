@@ -7,9 +7,9 @@ sap.ui.define([
     // ==========================================================
     // PDF: Source vorbereiten (URL oder Base64 -> ObjectURL)
     // ==========================================================
-    preparePdfSourceFromInvoice: function (oController, oInvoice) {
+    preparePdfSourceFromInvoice: async function (oController, oInvoice) {
       const oModel = oController.getOwnerComponent().getModel("backend");
-      if (!oModel) { return; }
+      if (!oModel) return;
 
       const aBlobs = oInvoice?.MetaData?.Blobs || [];
 
@@ -22,68 +22,110 @@ sap.ui.define([
           fn.endsWith(".png") || fn.endsWith(".jpg") || fn.endsWith(".jpeg");
       };
 
-      // ==========================================================
-      // PDFs expandieren: pro ViewBlob (Seite) ein Item
-      // ==========================================================
       const aItems = [];
 
-      aBlobs
-        .filter(b => isPdf(b) || isImg(b))
-        .forEach(b => {
-          const bIsPdf = isPdf(b);
-          const sFileName = b.FileName || b.Name || (bIsPdf ? "PDF" : "Image");
-          const sLink = b.Link || "";
+      // ✅ filter vorher, dann async-fähig iterieren
+      const aRelevant = aBlobs.filter(b => isPdf(b) || isImg(b));
 
-          if (bIsPdf) {
-            const aViewBlobs = Array.isArray(b?.ViewBlobs) ? b.ViewBlobs : [];
+      for (const b of aRelevant) {
+        const bIsPdf = isPdf(b);
+        const sFileName = b.FileName || b.Name || (bIsPdf ? "PDF" : "Image");
+        const sLink = b.Link || "";
 
-            // Wenn Backend Seiten-Previews liefert -> jede Seite als eigenes Carousel-Item
-            if (aViewBlobs.length > 0) {
-              aViewBlobs.forEach((vb, idx) => {
-                aItems.push({
-                  sortId: b.SortId,
-                  id: `${b.Id || sFileName}__p${idx + 1}`,   // ✅ eindeutige ID pro Seite
-                  fileName: `${sFileName} (p.${idx + 1})`,  // optional
-                  mimeType: b.MimeType || "",
-                  fileLink: sLink,                           // ✅ Original PDF zum Öffnen
-                  previewLink: vb?.Link || "",               // ✅ Preview der Seite
-                  kind: "pdf",
-                  icon: "sap-icon://pdf-attachment",
-                  openText: "Open PDF",
-                  pageIndex: idx + 1                          // optional (nur Info)
-                });
-              });
-            } else {
-              // Fallback: keine ViewBlobs -> nur 1 Item
+        if (bIsPdf) {
+          const aViewBlobs = Array.isArray(b?.ViewBlobs) ? b.ViewBlobs : [];
+
+          if (aViewBlobs.length > 0) {
+            aViewBlobs.forEach((vb, idx) => {
               aItems.push({
                 sortId: b.SortId,
-                id: b.Id,
-                fileName: sFileName,
+                id: `${b.Id || sFileName}__p${idx + 1}`,
+                fileName: `${sFileName} (p.${idx + 1})`,
                 mimeType: b.MimeType || "",
                 fileLink: sLink,
-                previewLink: "",
+                previewLink: vb?.Link || "",
                 kind: "pdf",
                 icon: "sap-icon://pdf-attachment",
-                openText: "Open PDF"
+                openText: "Open PDF",
+                pageIndex: idx + 1
               });
-            }
+            });
+          } else {
+            // ✅ hier darfst du jetzt await nutzen
+            const oAuth = oController.getOwnerComponent().getModel("auth");
+            const sAuthHeader =
+              ((oAuth?.getProperty("/tokenType") || "Bearer").trim() + " " + (oAuth?.getProperty("/token") || "").trim()).trim();
 
-            return;
+            const sDocId = oModel.getProperty("/CurrentInvoice/Id"); 
+            const sUrl = `https://test.app.clarc.com/application/api/v1/documenthub/document(${encodeURIComponent(sDocId)})/generateviewblobs`;
+
+            const oResp = await fetch(sUrl, {
+              method: "POST",
+              credentials: "include",
+              headers: { 
+                "Content-Type": "application/json",
+                "Authorization": sAuthHeader,
+               },
+              body: JSON.stringify({
+                Limit: 0
+              })
+            });
+
+            const sText = await oResp.text();
+            if (!oResp.ok) {
+              sap.m.MessageBox.error(`Generating of View Bolobs failed (${oResp.status}): ${sText}`);
+              return;
+            }
+            const oJson = JSON.parse(sText);
+
+            const aViewBlobs = (oJson?.Blobs?.[0]?.ViewBlobs) || [];
+
+            aViewBlobs.forEach((vb, idx) => {
+              aItems.push({
+                sortId: b.SortId,
+                id: `${b.Id || sFileName}__p${idx + 1}`,
+                fileName: `${sFileName} (p.${idx + 1})`,
+                mimeType: b.MimeType || "",
+                fileLink: sLink,
+                previewLink: vb?.Link || "",
+                kind: "pdf",
+                icon: "sap-icon://pdf-attachment",
+                openText: "Open PDF",
+                pageIndex: idx + 1
+              });
+            });
+
+            // // optional: wenn du danach ViewBlobs neu laden willst, hier machen.
+
+            // aItems.push({
+            //   sortId: b.SortId,
+            //   id: b.Id,
+            //   fileName: sFileName,
+            //   mimeType: b.MimeType || "",
+            //   fileLink: sLink,
+            //   previewLink: "",
+            //   kind: "pdf",
+            //   icon: "sap-icon://pdf-attachment",
+            //   openText: "Open PDF"
+            // });
           }
 
-          // Image bleibt 1:1
-          aItems.push({
-            sortId: b.SortId,
-            id: b.Id,
-            fileName: sFileName,
-            mimeType: b.MimeType || "",
-            fileLink: sLink,
-            previewLink: sLink,
-            kind: "image",
-            icon: "sap-icon://attachment-photo",
-            openText: "Open Image"
-          });
+          continue;
+        }
+
+        // Image bleibt 1:1
+        aItems.push({
+          sortId: b.SortId,
+          id: b.Id,
+          fileName: sFileName,
+          mimeType: b.MimeType || "",
+          fileLink: sLink,
+          previewLink: sLink,
+          kind: "image",
+          icon: "sap-icon://attachment-photo",
+          openText: "Open Image"
         });
+      }
 
       oModel.setProperty("/CurrentInvoice/BlobItems", aItems);
 
