@@ -319,45 +319,6 @@ sap.ui.define([
     },
 
         // ==========================================================
-        // Panel neu wenn User Refresh Button mit offenem Panel drückt
-        // ==========================================================
-        refreshFromInvoiceId: function (sInvoiceId) {
-            const oModel = this.getOwnerComponent().getModel("backend");
-            if (!oModel) { return; }
-
-            const aInvoices = oModel.getProperty("/value") || [];
-            const sWanted = String(sInvoiceId || "").trim();
-
-            let oInvoice = aInvoices.find(o =>
-                String(o?.MetaData?.Object?.Data?.Basics?.Number?.Value ?? "").trim() === sWanted
-            );
-
-            if (!oInvoice) {
-                oInvoice = aInvoices.find(o => String(o?.Id ?? "").trim() === sWanted);
-            }
-
-            if (!oInvoice) {
-                console.warn("refreshFromInvoiceId: Invoice nicht gefunden:", sInvoiceId);
-                return;
-            }
-
-            oModel.setProperty("/CurrentInvoice", oInvoice);
-
-            this.getView().bindElement({
-                path: "/CurrentInvoice",
-                model: "backend"
-            });
-
-            // ✅ Overview/Preview aktualisieren
-            this._refreshPanel();
-
-            // ✅ HISTORY: auch beim Refresh neu laden (Helper cached nach DocId)
-            this._loadHistoryLogs();
-
-            this._rebuildLists();
-        },
-
-        // ==========================================================
         // Refresht NUR Overview (Preview/Carousel) zur Laufzeit
         // ==========================================================
         _refreshPanel: function () {
@@ -378,9 +339,8 @@ sap.ui.define([
             }
         },
 
-        // ==========================================================
-        // HISTORY: Tab Select -> sicherstellen, dass Logs da sind
-        // ==========================================================
+        
+        // HISTORY: Tab Select -> sicherstellen, dass Logs da sind, man braucht das dafür, dass die Logs aktualisiert werden, selbst wenn Panel nicht neu geöffnet wird
         onIconTabSelect: function (oEvent) {
             const sKey = oEvent.getParameter("key");
             if (sKey === "history") {
