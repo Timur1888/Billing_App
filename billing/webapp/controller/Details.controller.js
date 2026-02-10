@@ -48,6 +48,13 @@ sap.ui.define([
       });
       this.getView().setModel(oTemplateModel, "template");
 
+      //das Model, das das JSON des ganzen Dokuments zwischenspeichert.
+      this.getView().setModel(new sap.ui.model.json.JSONModel({
+        docId: "",
+        doc: null,
+        fetchedAt: null
+      }), "docCache");
+
       this._pMsgTemplateDialog = null;
       this._oTemplateBackup = null; // Backup nur für aktuelle Rechnung
 
@@ -525,6 +532,70 @@ onSendInvoice: async function () {
 },
 
 //----------------------------------------------------------------------------------------------------Save-Button-----------------------------------------------------------------
+onSavePanel: async function () {
+  const oAuth = this.getOwnerComponent().getModel("auth");
+  const oTemplate = this.getView().getModel("template");
+  const oDocCache = this.getView().getModel("docCache");
+
+  const sType = oAuth?.getProperty("/tokenType");
+  const sTok  = oAuth?.getProperty("/token");
+  const sDocId = this._getCurrentDocumentId?.();
+
+  if (!sTok || !sDocId || !oTemplate) { /* deine Toasts */ return; }
+
+  // Template Werte
+  const sKey = String(oTemplate.getProperty("/currentInvoiceKey") || "").trim();
+  const sBasePath = sKey ? ("/invoices/" + sKey) : null;
+  if (!sBasePath) { MessageToast.show("No current invoice key."); return; }
+
+  const sSubject = (oTemplate.getProperty(sBasePath + "/subject") || "").trim();
+  const sBody    = (oTemplate.getProperty(sBasePath + "/body") || "").trim();
+
+  // ✅ volles Dokument aus Cache holen
+  const oDoc = oDocCache?.getProperty("/doc");
+  const sCachedId = oDocCache?.getProperty("/docId");
+  if (!oDoc || sCachedId !== sDocId) {
+    MessageToast.show("Document not loaded yet. Please reload and try again.");
+    return;
+  }
+
+  // ✅ Deep copy, dann Werte setzen
+  const oFull = JSON.parse(JSON.stringify(oDoc));
+  oFull.MetaData ??= {};
+  oFull.MetaData.Object ??= {};
+  oFull.MetaData.Object.Data ??= {};
+  oFull.MetaData.Object.Data.Subject = sSubject;
+  oFull.MetaData.Object.Data.AdditionalInformation = sBody;
+
+  const sBase = "https://test.app.clarc.com:443/application/api/v1/documenthub";
+  const sUrl1 = `${sBase}/document(${encodeURIComponent(sDocId)})`;
+  const sUrl2 = `${sBase}/document/${encodeURIComponent(sDocId)}`;
+
+  const oHeaders = {
+    "Authorization": `${sType} ${sTok}`,
+    "Accept": "application/json",
+    "Content-Type": "application/json"
+  };
+
+  try {
+    let r = await fetch(sUrl1, { method: "PUT", headers: oHeaders, body: JSON.stringify(oFull) });
+    if (!r.ok) r = await fetch(sUrl2, { method: "PUT", headers: oHeaders, body: JSON.stringify(oFull) });
+
+    if (!r.ok) {
+      const t = await r.text().catch(() => "");
+      throw new Error(`HTTP ${r.status} ${r.statusText}${t ? " - " + t : ""}`);
+    }
+
+    // optional: Cache mit Response aktualisieren (falls Backend Felder ergänzt)
+    const oSaved = await r.json().catch(() => null);
+    if (oSaved && oDocCache) oDocCache.setProperty("/doc", oSaved);
+
+    MessageToast.show("Template saved.");
+  } catch (e) {
+    MessageToast.show(`Save failed: ${e.message || e}`);
+    console.error("Template save failed:", e);
+  }
+},
 
 
 

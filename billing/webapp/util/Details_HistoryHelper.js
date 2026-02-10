@@ -90,7 +90,13 @@ sap.ui.define([], function () {
           if (!r2.ok) throw new Error(`HTTP ${r2.status} ${r2.statusText}`);
           oData = await r2.json();
         }
-
+        //das ganze Dokument cachen, um ihn später mit PATCH API Call beim Speichern des Panels "Save" Button zu versenden
+        const oDocCache = oController.getView().getModel("docCache");
+        if (oDocCache) {
+          oDocCache.setProperty("/docId", sDocId);
+          oDocCache.setProperty("/doc", oData);          
+          oDocCache.setProperty("/fetchedAt", Date.now());
+        }
         // ✅ NEU: BillingId aus History-Response ablegen
         const sBillingId = (oData?.Process?.Manager?.Id || "").trim();
         oHistory.setProperty("/billingId", sBillingId);
