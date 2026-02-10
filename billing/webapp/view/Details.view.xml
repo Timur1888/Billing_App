@@ -7,10 +7,15 @@
       </headerContent>
       <content>
          <!-- Tabs: Overview / History -->
-         <IconTabBar id="itbDetails" expanded="true" upperCase="false" selectedKey="overview" select=".onIconTabSelect">
+         <IconTabBar id="itbDetails" expanded="true" upperCase="false" selectedKey="overview" select=".onIconTabSelect" stretchContentHeight="true" backgroundDesign="Transparent" applyContentPadding="false">
             <items>
                <!-- ================== OVERVIEW TAB ================== -->
                <IconTabFilter key="overview" text="Overview">
+               <ScrollContainer
+					height="100%"
+					width="100%"
+					horizontal="false"
+					vertical="true">
                   <!-- ==========================================
                      PDF direkt im Panel + Klick öffnet Popup
                      ========================================== -->
@@ -121,10 +126,17 @@
 <!-- ================================================= -->
 
                   </VBox>
+                  </ScrollContainer>
                </IconTabFilter>
                <!-- ================== HISTORY TAB ================== -->
                <IconTabFilter key="history" text="History">
-               <VBox class="historyTabWhite" width="100%">
+                              <ScrollContainer
+					height="100%"
+					width="100%"
+					horizontal="false"
+					vertical="true">
+               
+               <VBox width="100%">
 
                   <List
                      id="lstHistory"
@@ -165,6 +177,7 @@
 
                   </List>
                </VBox>
+               </ScrollContainer>
                </IconTabFilter>
 
             </items>
