@@ -124,11 +124,12 @@
                </IconTabFilter>
                <!-- ================== HISTORY TAB ================== -->
                <IconTabFilter key="history" text="History">
-               <VBox class="sapUiSmallMargin" width="100%">
+               <VBox class="historyTabWhite" width="100%">
 
                   <List
                      id="lstHistory"
                      width="100%"
+                     class="historyListWhite"
                      items="{history>/logs}"
                      noDataText="No history entries."
                      growing="true"
@@ -136,7 +137,7 @@
                      showSeparators="Inner">
 
                      <CustomListItem>
-                     <VBox width="100%" class="sapUiTinyMarginTop sapUiTinyMarginBottom">
+                     <VBox width="100%">
 
                         <!-- 1. Zeile: Message links, Status rechts -->
                         <HBox width="100%" justifyContent="SpaceBetween" alignItems="Center">
