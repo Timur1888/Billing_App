@@ -52,7 +52,8 @@ sap.ui.define([
       this.getView().setModel(new sap.ui.model.json.JSONModel({
         docId: "",
         doc: null,
-        fetchedAt: null
+        fetchedAt: null,
+        canSave: false  //das Wert für Save Button. Keine Änderung -> Button disablen -> nichts speichern
       }), "docCache");
 
       this._pMsgTemplateDialog = null;
@@ -75,6 +76,10 @@ sap.ui.define([
       this.byId("uploadSetAttachments")?.addEventDelegate({
         onAfterRendering: () => this._wireUploadSetItemPress("uploadSetAttachments")
       });
+    },
+
+    onValueChange: function () {
+      this.getView().getModel("docCache").setProperty("/canSave", true);
     },
 
         // ------------------------------- Edit Templates -------------------------------
@@ -172,7 +177,7 @@ sap.ui.define([
           selectedLanguageKey: oModel.getProperty(sPath + "/selectedLanguageKey") || "en"
         };
       }
-
+      this.onValueChange(); //Save Button aktivieren
       // Panel-Templates ggf. direkt aktualisieren
       this._bindTemplateContexts();
     },
@@ -261,6 +266,8 @@ sap.ui.define([
         // Panel komplett neu wenn User eine Rechnung selektiert
         // ==========================================================
         _onRouteMatched: function (oEvent) {
+            this.getView().getModel("docCache").setProperty("/canSave", false);
+
             const sInvoiceId =  String(oEvent.getParameter("arguments").invoiceId).trim();
 
             // Layout sicherstellen
@@ -590,7 +597,7 @@ onSavePanel: async function () {
     const oSaved = await r.json().catch(() => null);
     if (oSaved && oDocCache) oDocCache.setProperty("/doc", oSaved);
 
-    MessageToast.show("Template saved.");
+    MessageToast.show("Data saved.");
   } catch (e) {
     MessageToast.show(`Save failed: ${e.message || e}`);
     console.error("Template save failed:", e);

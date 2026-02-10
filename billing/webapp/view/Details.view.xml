@@ -74,7 +74,7 @@
                      <!-- Output -->
                      <Title text="Output" level="H4" class="sapUiMediumMarginTop" />
 <VBox class="sapUiSmallMarginTop" width="97%">
-    <Select width="100%" class="sapUiSmallMarginBottom" selectedKey="{send>/transferFormat}">
+    <Select width="100%" class="sapUiSmallMarginBottom" selectedKey="{send>/transferFormat}" change=".onValueChange">
         <items>
             <core:Item key="transF" text="Transfer Format" />
             <core:Item key="fx" text="Factur-X" />
@@ -82,7 +82,7 @@
         </items>
     </Select>
 
-    <Select width="100%" class="sapUiSmallMarginBottom" selectedKey="{send>/deliveryMethod}">
+    <Select width="100%" class="sapUiSmallMarginBottom" selectedKey="{send>/deliveryMethod}" change=".onValueChange">
         <items>
             <core:Item key="delMeth" text="Delivery Method" />
             <core:Item key="email" text="Email" />
@@ -90,9 +90,9 @@
         </items>
     </Select>
 
-    <Input placeholder="Receiver" class="sapUiSmallMarginBottom" value="{send>/recipient}" />
-    <Input placeholder="CC"       class="sapUiSmallMarginBottom" value="{send>/cc}" />
-    <Input placeholder="BCC"      class="sapUiSmallMarginBottom" value="{send>/bcc}" />
+    <Input placeholder="Receiver" class="sapUiSmallMarginBottom" value="{send>/recipient}" liveChange=".onValueChange"/>
+    <Input placeholder="CC"       class="sapUiSmallMarginBottom" value="{send>/cc}" liveChange=".onValueChange"/>
+    <Input placeholder="BCC"      class="sapUiSmallMarginBottom" value="{send>/bcc}" liveChange=".onValueChange"/>
 </VBox>
 <!-- ================== Templates ================== -->
 <Title text="Templates" level="H4" class="sapUiMediumMarginTop" />
@@ -174,7 +174,7 @@
       <footer>
          <Toolbar>
             <ToolbarSpacer />
-            <Button text="Save" type="Transparent" press=".onSavePanel"/>
+            <Button text="Save" type="Transparent" enabled="{docCache>/canSave}" press=".onSavePanel"/>
             <Button text="Send" type="Emphasized" enabled="{send>/canSend}" press=".onSendInvoice"/>
          </Toolbar>
       </footer>
