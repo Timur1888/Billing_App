@@ -7,7 +7,7 @@
       </headerContent>
       <content>
          <!-- Tabs: Overview / History -->
-         <IconTabBar id="itbDetails" expanded="true" upperCase="false" selectedKey="overview" select=".onIconTabSelect" stretchContentHeight="true" backgroundDesign="Transparent" applyContentPadding="false">
+         <IconTabBar id="itbDetails" expanded="true" upperCase="false" selectedKey="overview" select=".onIconTabSelect" stretchContentHeight="true" backgroundDesign="Transparent" applyContentPadding="false" >
             <items>
                <!-- ================== OVERVIEW TAB ================== -->
                <IconTabFilter key="overview" text="Overview">
