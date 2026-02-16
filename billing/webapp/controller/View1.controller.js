@@ -103,11 +103,16 @@ sap.ui.define([
             this.oSmartVariantManagement.initialise(function() {}, this.oFilterBar);
             //--------------------------------------------------
 
-            //--------------------Sortierung----------------------
+            //--------------------Sortierung--------------------- 
             this._aColumnMenus = [];
             this._fnItemsBindingChange = null;
-            this._attachPerColumnMenus();
+            this._mQuickSortItemsByKey = Object.create(null);
+            this._oSortState = { path: "", descending: false };
 
+            this._attachPerColumnMenus().then(() => {
+            this._syncQuickSortUI(); // wenn Variant schon Sort gesetzt hat
+            });
+            this._oSortState = { path: "", descending: false };
             //-----------------------------------------------------
             this._bSvmReady = false;
             this.oSmartVariantManagement.initialise(function () {
@@ -116,21 +121,26 @@ sap.ui.define([
         },
 
         //::::::::::::::::::::::::::::::::::::::::::::::SOTRIERUNG:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-        onSortChange: function(oEvent) {
-            const oTable = this.byId("tblBilling");
-            const oBinding = oTable.getBinding("items");
+        onSortChange: function (oEvent) {
+        const oTable = this.byId("tblBilling");
+        const oBinding = oTable.getBinding("items");
 
-            const oItem = oEvent.getParameter("item"); // QuickSortItem
-            const sPath = oItem.getKey();
-            const sOrder = oItem.getSortOrder();
+        const oItem = oEvent.getParameter("item"); // QuickSortItem
+        const sPath = oItem.getKey();
+        const sOrder = oItem.getSortOrder();
 
-            if (sOrder === "None") {
-                oBinding.sort();
-                return;
-            }
-
+        if (sOrder === "None") {
+            this._oSortState = { path: "", descending: false };
+            oBinding.sort(); // reset
+        } else {
             const bDesc = (sOrder === "Descending");
+            this._oSortState = { path: sPath, descending: bDesc };
             oBinding.sort([new Sorter(sPath, bDesc)]);
+        }
+
+        this._syncQuickSortUI();
+        // wichtig: Variante als geändert markieren
+        this.oSmartVariantManagement.currentVariantSetModified(true);
         },
         //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::Filter::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
         //zentrale Funktion, die alle Filter anwendet
@@ -249,69 +259,94 @@ sap.ui.define([
         oPop.openBy(oButton);
         },
 
-        // suggestion für die Werte aus NettoValue
-        onSuggest: function(oEvent) {
-            var oSF = oEvent.getSource();
-            var oBinding = oSF.getBinding("suggestionItems");
+        // // suggestion für die Werte aus NettoValue
+        // onSuggest: function(oEvent) {
+        //     var oSF = oEvent.getSource();
+        //     var oBinding = oSF.getBinding("suggestionItems");
 
-            this.onAddFilter();
+        //     this.onAddFilter();
 
-            if (!oBinding) {
-                return;
-            }
-            //.replace(/^ccIT_/, "");
-            var sValue = (oEvent.getParameter("suggestValue") || oSF.getValue() || "").trim();
+        //     if (!oBinding) {
+        //         return;
+        //     }
+        //     //.replace(/^ccIT_/, "");
+        //     var sValue = (oEvent.getParameter("suggestValue") || oSF.getValue() || "").trim();
 
-            if (!sValue) {
-                oBinding.filter([]);
-                oSF.suggest();
-                return;
-            }
+        //     if (!sValue) {
+        //         oBinding.filter([]);
+        //         oSF.suggest();
+        //         return;
+        //     }
 
-            oBinding.filter([
-                new sap.ui.model.Filter("text", sap.ui.model.FilterOperator.Contains, sValue)
-            ]);
-            oSF.suggest();
-        },
+        //     oBinding.filter([
+        //         new sap.ui.model.Filter("text", sap.ui.model.FilterOperator.Contains, sValue)
+        //     ]);
+        //     oSF.suggest();
+        // },
 
-        //Filterzustand sammeln
-        fetchData: function() {
-            return this.oFilterBar.getAllFilterItems().reduce(function(aResult, oFilterItem) {
-                var oControl = oFilterItem.getControl();
-                var vData;
+        //hole den Filterzusatndustand, der im Variant gespeichert werden soll
+        fetchData: function () {
+            const aData = this.oFilterBar.getAllFilterItems().reduce(function (aResult, oFilterItem) {
+                const oControl = oFilterItem.getControl();
+                let vData;
 
                 if (oControl && oControl.getSelectedKeys) {
-                    vData = oControl.getSelectedKeys(); // MultiComboBox
+                vData = oControl.getSelectedKeys();
                 } else if (oControl && oControl.getValue) {
-                    vData = oControl.getValue(); // SearchField/Input
+                vData = oControl.getValue();
                 } else {
-                    vData = null; // fallback
+                vData = null;
                 }
 
                 aResult.push({
-                    groupName: oFilterItem.getGroupName(),
-                    fieldName: oFilterItem.getName(),
-                    fieldData: vData
+                groupName: oFilterItem.getGroupName(),
+                fieldName: oFilterItem.getName(),
+                fieldData: vData
                 });
-
                 return aResult;
             }, []);
+
+            // Sortierung dazu
+            aData.push({
+                groupName: "TABLE",
+                fieldName: "__SORT__",
+                fieldData: this._oSortState // {path:"...", descending:true/false}
+            });
+            return aData;
         },
 
-        //Filterzustand anwenden
-        applyData: function(aData) {
-            aData.forEach(function(oDataObject) {
-                var oControl = this.oFilterBar.determineControlByName(oDataObject.fieldName, oDataObject.groupName);
-                if (!oControl) {
-                    return;
-                }
 
-                if (oControl.setSelectedKeys && Array.isArray(oDataObject.fieldData)) {
-                    oControl.setSelectedKeys(oDataObject.fieldData);
-                } else if (oControl.setValue && typeof oDataObject.fieldData === "string") {
-                    oControl.setValue(oDataObject.fieldData);
-                }
-            }, this);
+        //spiele den im Variant gespeicherten Filterzustand wieder ein
+        applyData: function (aData) {
+        // Filter
+        aData.forEach(function (oDataObject) {
+            if (oDataObject.fieldName === "__SORT__") { return; }
+
+            const oControl = this.oFilterBar.determineControlByName(oDataObject.fieldName, oDataObject.groupName);
+            if (!oControl) { return; }
+
+            if (oControl.setSelectedKeys && Array.isArray(oDataObject.fieldData)) {
+            oControl.setSelectedKeys(oDataObject.fieldData);
+            } else if (oControl.setValue && typeof oDataObject.fieldData === "string") {
+            oControl.setValue(oDataObject.fieldData);
+            }
+        }, this);
+
+        // Sort
+        const oSortEntry = aData.find(x => x.fieldName === "__SORT__");
+        const st = oSortEntry && oSortEntry.fieldData;
+        this._oSortState = st || { path: "", descending: false };
+
+        const oBinding = this.byId("tblBilling").getBinding("items");
+        if (oBinding) {
+            if (!this._oSortState.path) {
+            oBinding.sort(); // reset
+            } else {
+            oBinding.sort([new Sorter(this._oSortState.path, !!this._oSortState.descending)]);
+            }
+        }
+
+        this._syncQuickSortUI();
         },
 
         //Aktive Filter ermitteln gibt nur die Filter zurück, die aktuell wirklich einen Wert haben
