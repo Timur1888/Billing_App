@@ -463,61 +463,58 @@ _escapeOData: function (s) {
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     //macht Fragment für die Sortierung einzelner Spalten generisch
-    _attachPerColumnMenus: function() {
+    _attachPerColumnMenus: function () {
       const oView = this.getView();
       const oTable = this.byId("tblBilling");
 
       const aPromises = oTable.getColumns().map((oCol) => {
         const sSortKey = (oCol.data("sortKey") || "").trim();
-        if (!sSortKey) {
-          return Promise.resolve();
-        }
+        if (!sSortKey) return Promise.resolve();
 
         return Fragment.load({
-          id: oView.getId() + "--" + oCol.getId(), // unique prefix pro Column
+          id: oView.getId() + "--" + oCol.getId(),
           name: "billing.view.fragments.ColumnMenu",
           controller: this
         }).then((oMenu) => {
           oView.addDependent(oMenu);
           this._aColumnMenus.push(oMenu);
 
-          // QuickSort finden (UI5-versionssicher)
           let oQuickSort = null;
-
           if (oMenu.getItems) {
             oQuickSort = oMenu.getItems().find(i => i.isA && i.isA("sap.m.table.columnmenu.QuickSort"));
           }
-
-          // Fallback: tief suchen
           if (!oQuickSort && oMenu.findAggregatedObjects) {
-            const aFound = oMenu.findAggregatedObjects(true, (oObj) =>
-              oObj.isA && oObj.isA("sap.m.table.columnmenu.QuickSort")
-            );
+            const aFound = oMenu.findAggregatedObjects(true, oObj => oObj.isA && oObj.isA("sap.m.table.columnmenu.QuickSort"));
             oQuickSort = aFound && aFound[0];
           }
-
-          if (!oQuickSort) {
-            console.error("QuickSort NOT found. Menu items are:", (oMenu.getItems ? oMenu.getItems().map(x => x.getMetadata().getName()) : []));
-            return;
-          }
-
-          // Items setzen: nur diese Spalte
-          oQuickSort.removeAllItems();
+          if (!oQuickSort) return;
 
           const oHeader = oCol.getHeader();
           const sLabel = (oHeader && oHeader.getText) ? oHeader.getText() : sSortKey;
 
-          oQuickSort.addItem(new QuickSortItem({
-            key: sSortKey,
-            label: sLabel
-          }));
+          oQuickSort.removeAllItems();
 
-          // Menu nur an diese Column hängen
+          const oQSI = new QuickSortItem({ key: sSortKey, label: sLabel });
+          oQuickSort.addItem(oQSI);
+          this._mQuickSortItemsByKey[sSortKey] = oQSI;
+
           oCol.setHeaderMenu(oMenu);
         });
       });
 
       return Promise.all(aPromises);
+    },
+    
+    _syncQuickSortUI: function () {
+      const m = this._mQuickSortItemsByKey;
+      if (!m) return;
+
+      Object.values(m).forEach(oItem => oItem?.setSortOrder?.("None"));
+
+      const st = this._oSortState;
+      if (st?.path && m[st.path]?.setSortOrder) {
+        m[st.path].setSortOrder(st.descending ? "Descending" : "Ascending");
+      }
     },
 
     //Ermöglicht die Suche mit *
