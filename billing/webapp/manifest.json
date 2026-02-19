@@ -37,9 +37,14 @@
     "dependencies": {
       "minUI5Version": "1.142.0",
       "libs": {
+        "sap.ui.comp": {},
+        "sap.ui.fl": {},
+        "sap.ui.mdc": {},
         "sap.m": {},
+        "sap.f": {},
         "sap.ui.core": {},
-        "sap.f": {}
+        "sap.ui.unified": {},
+        "sap.ui.layout": {}
       }
     },
     "contentDensities": {
@@ -53,13 +58,23 @@
       "i18n": {
         "type": "sap.ui.model.resource.ResourceModel",
         "settings": {
-          "bundleName": "billing.i18n.i18n"
+          "bundleName": "billing.i18n.i18n",
+          "supportedLocales": ["de", "en"],
+          "fallbackLocale": "en"
         }
       },
-    "": {
-      "type": "sap.ui.model.json.JSONModel",
-      "uri": "model/mockData.json"
-    }
+      "backend": {
+        "type": "sap.ui.model.json.JSONModel"
+      },
+      "auth": {
+        "type": "sap.ui.model.json.JSONModel"
+      },
+      "filterModel": {
+        "type": "sap.ui.model.json.JSONModel"
+      },
+      "billingConfig": {
+        "type": "sap.ui.model.json.JSONModel"
+      }
     },
     "resources": {
       "css": [
