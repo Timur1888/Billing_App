@@ -95,7 +95,7 @@
         </items>
     </Select>
 
-    <Input placeholder="Receiver" class="sapUiSmallMarginBottom" value="{send>/recipient}" liveChange=".onValueChange"/>
+    <Input id="inpRecipient" placeholder="Receiver" class="sapUiSmallMarginBottom" value="{send>/recipient}" liveChange=".onValueChange"/>
     <Input placeholder="CC"       class="sapUiSmallMarginBottom" value="{send>/cc}" liveChange=".onValueChange"/>
     <Input placeholder="BCC"      class="sapUiSmallMarginBottom" value="{send>/bcc}" liveChange=".onValueChange"/>
 </VBox>
@@ -187,7 +187,7 @@
       <footer>
          <Toolbar>
             <ToolbarSpacer />
-            <Button text="Save" type="Transparent" enabled="{docCache>/canSave}" press=".onSavePanel"/>
+            <Button text="Save" type="Transparent" enabled="{docCache>/canSave}" press=".onPressSave"/>
             <Button text="Send" type="Emphasized" enabled="{send>/canSend}" press=".onSendInvoice"/>
          </Toolbar>
       </footer>

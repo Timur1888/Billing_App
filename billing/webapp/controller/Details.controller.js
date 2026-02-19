@@ -530,6 +530,8 @@ onSendInvoice: async function () {
 
     sap.m.MessageToast.show("Invoice sent successfully.");
 
+    this.onSavePanel(true); 
+
   } catch (e) {
     oSend.setProperty("/canSend", true);
     sap.m.MessageBox.error(`Send failed: ${e?.message || e}`);
@@ -539,10 +541,14 @@ onSendInvoice: async function () {
 },
 
 //----------------------------------------------------------------------------------------------------Save-Button-----------------------------------------------------------------
-onSavePanel: async function () {
+onPressSave: function () {
+    this.onSavePanel(false);  
+},
+onSavePanel: async function (saveAfterSend) {
   const oAuth = this.getOwnerComponent().getModel("auth");
   const oTemplate = this.getView().getModel("template");
   const oDocCache = this.getView().getModel("docCache");
+  const oSend = this.getView().getModel("send");
 
   const sType = oAuth?.getProperty("/tokenType");
   const sTok  = oAuth?.getProperty("/token");
@@ -557,7 +563,11 @@ onSavePanel: async function () {
 
   const sSubject = (oTemplate.getProperty(sBasePath + "/subject") || "").trim();
   const sBody    = (oTemplate.getProperty(sBasePath + "/body") || "").trim();
-
+  var sRecipient = (oSend.getProperty("/recipient") || "").trim();
+  var sNewRecipient = this.byId("inpRecipient").getValue().trim();
+  if (sRecipient != sNewRecipient){
+    sRecipient = sNewRecipient;
+  }
   // ✅ volles Dokument aus Cache holen
   const oDoc = oDocCache?.getProperty("/doc");
   const sCachedId = oDocCache?.getProperty("/docId");
@@ -566,13 +576,14 @@ onSavePanel: async function () {
     return;
   }
 
-  // ✅ Deep copy, dann Werte setzen
+  // ✅ Deep copy, dann Werte setzen backend>MetaData/Object/Data/Basics/Recipient/Email/0/Address
   const oFull = JSON.parse(JSON.stringify(oDoc));
   oFull.MetaData ??= {};
   oFull.MetaData.Object ??= {};
   oFull.MetaData.Object.Data ??= {};
   oFull.MetaData.Object.Data.Subject = sSubject;
   oFull.MetaData.Object.Data.AdditionalInformation = sBody;
+  oFull.MetaData.Object.Data.Basics.Recipient.Email[0].Address = sRecipient;
 
   const sBase = "https://test.app.clarc.com:443/application/api/v1/documenthub";
   const sUrl1 = `${sBase}/document(${encodeURIComponent(sDocId)})`;
@@ -596,15 +607,14 @@ onSavePanel: async function () {
     // optional: Cache mit Response aktualisieren (falls Backend Felder ergänzt)
     const oSaved = await r.json().catch(() => null);
     if (oSaved && oDocCache) oDocCache.setProperty("/doc", oSaved);
-
-    MessageToast.show("Data saved.");
+    if (saveAfterSend == false){
+      MessageToast.show("Data saved.");
+    }
   } catch (e) {
     MessageToast.show(`Save failed: ${e.message || e}`);
     console.error("Template save failed:", e);
   }
 },
-
-
 
     });
 });
